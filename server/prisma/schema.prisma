@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   @default("WEB_APPLICATION")
+  criticality String   @default("MEDIUM")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  systems     System[]
+  csfBaseline CSFBaseline[]
+
+  @@map("products")
+}
+
+model System {
+  id                 String   @id @default(uuid())
+  name               String
+  description        String?
+  criticality        String   @default("MEDIUM")
+  environment        String   @default("PRODUCTION")
+  dataClassification String   @default("INTERNAL")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  assessments ComplianceAssessment[]
+
+  @@map("systems")
+}
+
+model CSFBaseline {
+  id             String   @id @default(uuid())
+  subcategoryId  String
+  applicable     Boolean  @default(false)
+  categoryLevel  String   @default("SHOULD_HAVE")
+  justification  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, subcategoryId])
+  @@map("csf_baselines")
+}
+
+model ComplianceAssessment {
+  id              String    @id @default(uuid())
+  subcategoryId   String
+  status          String    @default("NOT_ASSESSED")
+  details         String?
+  assessor        String?
+  assessedDate    DateTime?
+  legacyEvidence  String?   @map("evidence") // Legacy JSON array - migrating to Evidence model
+  remediationPlan String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  systemId String
+  system   System @relation(fields: [systemId], references: [id], onDelete: Cascade)
+
+  evidenceFiles Evidence[]
+
+  @@unique([systemId, subcategoryId])
+  @@map("compliance_assessments")
+}
+
+model CSFControl {
+  id                      String @id // e.g., "GV.OC-01"
+  functionId              String // e.g., "GV"
+  categoryId              String // e.g., "GV.OC"
+  title                   String
+  text                    String
+  implementationExamples  String? // JSON array
+  informativeReferences   String? // JSON array
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("csf_controls")
+}
+
+model NIST80053Mapping {
+  id            String @id @default(uuid())
+  csfControlId  String
+  nist80053Id   String
+  controlFamily String
+  priority      String
+  createdAt     DateTime @default(now())
+
+  @@unique([csfControlId, nist80053Id])
+  @@map("nist_80053_mappings")
+}
+
+model Evidence {
+  id           String   @id @default(uuid())
+  assessmentId String
+  assessment   ComplianceAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  fileName     String   // Stored file name (UUID-based)
+  originalName String   // Original uploaded file name
+  mimeType     String   // File MIME type
+  fileSize     Int      // File size in bytes
+  storagePath  String   // Path to file on disk or S3 key
+  storageType  String   @default("local") // "local" or "s3"
+
+  description  String?  // User-provided description
+  uploadedBy   String   // User ID who uploaded
+  uploadedAt   DateTime @default(now())
+
+  @@index([assessmentId])
+  @@map("evidence")
+}
+
+// Enums are replaced with string fields for SQLite compatibility
+// Valid values are enforced in the application layer:
+// 
+// Role: USER, ADMIN, AUDITOR
+// ProductType: WEB_APPLICATION, MOBILE_APPLICATION, INFRASTRUCTURE, CLOUD_SERVICE, 
+//              API_SERVICE, DATABASE, NETWORK_DEVICE, SECURITY_TOOL, OTHER
+// Criticality: LOW, MEDIUM, HIGH, CRITICAL
+// Environment: DEVELOPMENT, STAGING, PRODUCTION, TEST
+// DataClassification: PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
+// CategoryLevel: MUST_HAVE, SHOULD_HAVE
+// ComplianceStatus: NOT_ASSESSED, COMPLIANT, PARTIALLY_COMPLIANT, NON_COMPLIANT, NOT_APPLICABLE

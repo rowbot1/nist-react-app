@@ -1,0 +1,42 @@
+{
+  "name": "nist-control-mapper-react",
+  "version": "2.0.0",
+  "description": "Production-ready NIST Cybersecurity Framework Control Mapper",
+  "main": "server/dist/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "client:dev": "cd client && npm start",
+    "server:dev": "cd server && npm run dev",
+    "client:build": "cd client && npm run build",
+    "server:build": "cd server && npm run build",
+    "build": "npm run client:build && npm run server:build",
+    "start": "cd server && npm start",
+    "test": "npm run client:test && npm run server:test",
+    "client:test": "cd client && npm test",
+    "server:test": "cd server && npm test",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "db:generate": "cd server && npx prisma generate",
+    "db:migrate": "cd server && npx prisma migrate dev",
+    "db:seed": "cd server && npm run seed",
+    "setup": "npm run install:all && npm run db:generate && npm run db:migrate && npm run db:seed"
+  },
+  "keywords": [
+    "nist",
+    "cybersecurity",
+    "framework",
+    "compliance",
+    "assessment",
+    "react",
+    "typescript",
+    "node.js"
+  ],
+  "author": "NIST Control Mapper Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

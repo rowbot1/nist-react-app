@@ -1,0 +1,1816 @@
+{
+  "mappings": [
+    {
+      "csfControlId": "DE.AE-01",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-01",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-02",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-02",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-03",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-03",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-04",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-04",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-05",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-05",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-06",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-06",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-07",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-07",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-08",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.AE-08",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-01",
+      "nist80053Id": "AU-12",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-01",
+      "nist80053Id": "AU-2",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-02",
+      "nist80053Id": "AU-2",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-02",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-03",
+      "nist80053Id": "AU-2",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-03",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-04",
+      "nist80053Id": "SI-3",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-04",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-05",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-05",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-06",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-06",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-07",
+      "nist80053Id": "AU-2",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-07",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-08",
+      "nist80053Id": "RA-5",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-08",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-09",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.CM-09",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-01",
+      "nist80053Id": "AT-2",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-01",
+      "nist80053Id": "PS-7",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-02",
+      "nist80053Id": "AT-2",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-02",
+      "nist80053Id": "PS-7",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-03",
+      "nist80053Id": "AT-2",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-03",
+      "nist80053Id": "PS-7",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-04",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-04",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-05",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "DE.DP-05",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-01",
+      "nist80053Id": "PL-2",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-01",
+      "nist80053Id": "PM-11",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.OC-02",
+      "nist80053Id": "PL-2",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-02",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.OC-03",
+      "nist80053Id": "CA-2",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "GV.OC-03",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "GV.OC-03",
+      "nist80053Id": "PL-2",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-04",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-04",
+      "nist80053Id": "RA-2",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-05",
+      "nist80053Id": "PL-8",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OC-05",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.OV-01",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "GV.OV-01",
+      "nist80053Id": "PM-4",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.OV-02",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "GV.OV-02",
+      "nist80053Id": "PM-4",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.OV-03",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "GV.OV-03",
+      "nist80053Id": "PM-4",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.PO-01",
+      "nist80053Id": "PL-1",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.PO-01",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.PO-02",
+      "nist80053Id": "PL-1",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.PO-02",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-01",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-01",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-02",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-02",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-03",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-03",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-04",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-04",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-05",
+      "nist80053Id": "PM-15",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-05",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-06",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-06",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RM-07",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RM-07",
+      "nist80053Id": "RA-1",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RR-01",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RR-01",
+      "nist80053Id": "PM-9",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RR-02",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RR-02",
+      "nist80053Id": "PS-2",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RR-03",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RR-03",
+      "nist80053Id": "PM-11",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.RR-04",
+      "nist80053Id": "AT-1",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.RR-04",
+      "nist80053Id": "PS-1",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-01",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-01",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-02",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-02",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-03",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-03",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-04",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-04",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-05",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-05",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-06",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-06",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-07",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-07",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-08",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-08",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-09",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-09",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "GV.SC-10",
+      "nist80053Id": "PM-30",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "GV.SC-10",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-01",
+      "nist80053Id": "CM-8",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-01",
+      "nist80053Id": "PM-5",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.AM-02",
+      "nist80053Id": "CM-8",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-02",
+      "nist80053Id": "PM-5",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.AM-03",
+      "nist80053Id": "CA-3",
+      "controlFamily": "CA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-03",
+      "nist80053Id": "CM-8",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-04",
+      "nist80053Id": "CM-8",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-04",
+      "nist80053Id": "SA-4",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-05",
+      "nist80053Id": "CM-8",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-05",
+      "nist80053Id": "PM-5",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.AM-06",
+      "nist80053Id": "AC-20",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-06",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-07",
+      "nist80053Id": "PL-2",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-07",
+      "nist80053Id": "PM-5",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.AM-08",
+      "nist80053Id": "PL-8",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.AM-08",
+      "nist80053Id": "PM-5",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.BE-01",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-01",
+      "nist80053Id": "RA-2",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-02",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-02",
+      "nist80053Id": "RA-2",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-03",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-03",
+      "nist80053Id": "RA-2",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-04",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-04",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-05",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.BE-05",
+      "nist80053Id": "SA-14",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.GV-01",
+      "nist80053Id": "PL-1",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.GV-01",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.GV-02",
+      "nist80053Id": "PL-1",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.GV-02",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.GV-03",
+      "nist80053Id": "PL-1",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.GV-03",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.GV-04",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "ID.GV-04",
+      "nist80053Id": "PM-1",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.RA-01",
+      "nist80053Id": "PM-15",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.RA-01",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-02",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-02",
+      "nist80053Id": "SA-8",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-03",
+      "nist80053Id": "PM-16",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.RA-03",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-04",
+      "nist80053Id": "PM-16",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.RA-04",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-05",
+      "nist80053Id": "RA-5",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-05",
+      "nist80053Id": "SI-2",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-06",
+      "nist80053Id": "PM-16",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "ID.RA-06",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-07",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-07",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-08",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-08",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-09",
+      "nist80053Id": "RA-5",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-09",
+      "nist80053Id": "SI-2",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-10",
+      "nist80053Id": "RA-3",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "ID.RA-10",
+      "nist80053Id": "SA-9",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-01",
+      "nist80053Id": "IA-1",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-01",
+      "nist80053Id": "IA-2",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-02",
+      "nist80053Id": "IA-2",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-02",
+      "nist80053Id": "IA-8",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-03",
+      "nist80053Id": "IA-5",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-03",
+      "nist80053Id": "IA-6",
+      "controlFamily": "IA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "PR.AA-04",
+      "nist80053Id": "IA-1",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-04",
+      "nist80053Id": "IA-4",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-05",
+      "nist80053Id": "IA-1",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-05",
+      "nist80053Id": "IA-12",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "PR.AA-06",
+      "nist80053Id": "IA-1",
+      "controlFamily": "IA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AA-06",
+      "nist80053Id": "IA-11",
+      "controlFamily": "IA",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "PR.AC-01",
+      "nist80053Id": "AC-1",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-01",
+      "nist80053Id": "AC-2",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-02",
+      "nist80053Id": "AC-2",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-02",
+      "nist80053Id": "AC-3",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-03",
+      "nist80053Id": "AC-17",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-03",
+      "nist80053Id": "AC-18",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-04",
+      "nist80053Id": "AC-5",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-04",
+      "nist80053Id": "AC-6",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-05",
+      "nist80053Id": "AC-4",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-05",
+      "nist80053Id": "SC-7",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-06",
+      "nist80053Id": "AC-2",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-06",
+      "nist80053Id": "AC-3",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-07",
+      "nist80053Id": "AC-2",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AC-07",
+      "nist80053Id": "PS-3",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AT-01",
+      "nist80053Id": "AT-1",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AT-01",
+      "nist80053Id": "AT-2",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AT-02",
+      "nist80053Id": "AT-1",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.AT-02",
+      "nist80053Id": "AT-3",
+      "controlFamily": "AT",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-01",
+      "nist80053Id": "SC-13",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-01",
+      "nist80053Id": "SC-8",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-02",
+      "nist80053Id": "SC-13",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-02",
+      "nist80053Id": "SC-8",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-03",
+      "nist80053Id": "CM-2",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-03",
+      "nist80053Id": "CM-6",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-04",
+      "nist80053Id": "MP-6",
+      "controlFamily": "MP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-04",
+      "nist80053Id": "SC-28",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "PR.DS-05",
+      "nist80053Id": "SC-13",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-05",
+      "nist80053Id": "SC-28",
+      "controlFamily": "Unknown",
+      "priority": "P3"
+    },
+    {
+      "csfControlId": "PR.DS-06",
+      "nist80053Id": "AC-4",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-06",
+      "nist80053Id": "SC-4",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-07",
+      "nist80053Id": "SA-8",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-07",
+      "nist80053Id": "SC-3",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-08",
+      "nist80053Id": "CP-9",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-08",
+      "nist80053Id": "SI-12",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-09",
+      "nist80053Id": "SA-8",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-09",
+      "nist80053Id": "SC-3",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-10",
+      "nist80053Id": "AC-4",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-10",
+      "nist80053Id": "SC-4",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-11",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.DS-11",
+      "nist80053Id": "CP-9",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-01",
+      "nist80053Id": "CM-1",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-01",
+      "nist80053Id": "CM-2",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-02",
+      "nist80053Id": "CM-2",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-02",
+      "nist80053Id": "CM-6",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-03",
+      "nist80053Id": "CM-3",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-03",
+      "nist80053Id": "CM-5",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-04",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-04",
+      "nist80053Id": "CP-9",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-05",
+      "nist80053Id": "PL-2",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-05",
+      "nist80053Id": "PL-8",
+      "controlFamily": "PL",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-06",
+      "nist80053Id": "CM-3",
+      "controlFamily": "CM",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-06",
+      "nist80053Id": "SI-2",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-07",
+      "nist80053Id": "SA-11",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-07",
+      "nist80053Id": "SA-8",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-08",
+      "nist80053Id": "SA-3",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-08",
+      "nist80053Id": "SA-8",
+      "controlFamily": "SA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-09",
+      "nist80053Id": "IR-1",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-09",
+      "nist80053Id": "IR-8",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-10",
+      "nist80053Id": "CP-1",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-10",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-11",
+      "nist80053Id": "PS-1",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-11",
+      "nist80053Id": "PS-6",
+      "controlFamily": "PS",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-12",
+      "nist80053Id": "RA-5",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.IP-12",
+      "nist80053Id": "SI-2",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.MA-01",
+      "nist80053Id": "MA-1",
+      "controlFamily": "MA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.MA-01",
+      "nist80053Id": "MA-2",
+      "controlFamily": "MA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "PR.MA-02",
+      "nist80053Id": "MA-2",
+      "controlFamily": "MA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "PR.MA-02",
+      "nist80053Id": "MA-3",
+      "controlFamily": "MA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "PR.PT-01",
+      "nist80053Id": "RA-5",
+      "controlFamily": "RA",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-01",
+      "nist80053Id": "SI-2",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-02",
+      "nist80053Id": "SI-3",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-02",
+      "nist80053Id": "SI-8",
+      "controlFamily": "SI",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "PR.PT-03",
+      "nist80053Id": "AC-4",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-03",
+      "nist80053Id": "SC-7",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-04",
+      "nist80053Id": "AC-4",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-04",
+      "nist80053Id": "SC-7",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-05",
+      "nist80053Id": "SC-5",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "PR.PT-05",
+      "nist80053Id": "SC-7",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.CO-01",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.CO-01",
+      "nist80053Id": "CP-4",
+      "controlFamily": "CP",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "RC.CO-02",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.CO-02",
+      "nist80053Id": "CP-4",
+      "controlFamily": "CP",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "RC.CO-03",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.CO-03",
+      "nist80053Id": "CP-4",
+      "controlFamily": "CP",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "RC.IM-01",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.IM-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.IM-02",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.IM-02",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-01",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-01",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-02",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-02",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-03",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-03",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-04",
+      "nist80053Id": "CP-10",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RC.RP-04",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-01",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-02",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-02",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-03",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-03",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-04",
+      "nist80053Id": "AU-6",
+      "controlFamily": "AU",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-04",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.AN-05",
+      "nist80053Id": "CA-7",
+      "controlFamily": "CA",
+      "priority": "P2"
+    },
+    {
+      "csfControlId": "RS.AN-05",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-01",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-02",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-02",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-03",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-03",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-04",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-04",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-05",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.CO-05",
+      "nist80053Id": "IR-6",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.IM-01",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.IM-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.IM-02",
+      "nist80053Id": "CP-2",
+      "controlFamily": "CP",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.IM-02",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-01",
+      "nist80053Id": "SC-5",
+      "controlFamily": "SC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-02",
+      "nist80053Id": "AC-2",
+      "controlFamily": "AC",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-02",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-03",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.MI-03",
+      "nist80053Id": "SI-4",
+      "controlFamily": "SI",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.RP-01",
+      "nist80053Id": "IR-4",
+      "controlFamily": "IR",
+      "priority": "P1"
+    },
+    {
+      "csfControlId": "RS.RP-01",
+      "nist80053Id": "IR-8",
+      "controlFamily": "IR",
+      "priority": "P1"
+    }
+  ],
+  "metadata": {
+    "source": "NIST CSF 2.0 to NIST 800-53 Rev 5 Mappings",
+    "total_mappings": 301,
+    "unique_csf_controls": 150,
+    "version": "1.0"
+  }
+}
