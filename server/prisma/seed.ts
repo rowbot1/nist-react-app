@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -111,6 +113,8 @@ async function main() {
   await prisma.cSFBaseline.deleteMany();
   await prisma.system.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.framework.deleteMany();
+  await prisma.capabilityCentre.deleteMany();
   await prisma.user.deleteMany();
   await prisma.nIST80053Mapping.deleteMany();
   await prisma.cSFControl.deleteMany();
@@ -260,38 +264,200 @@ async function main() {
   // CREATE DEMO USER AND SAMPLE DATA
   // ========================================================================
 
-  console.log('\n👤 Creating demo user...');
+  const demoEmail = process.env.DEMO_EMAIL || 'demo@posture.app';
+  const demoPassword = process.env.DEMO_PASSWORD || 'demo123';
+  let demoUser;
+  if (process.env.NODE_ENV === 'production') {
+    console.log('⏭️ Skipping demo user creation in production environment');
+    // Create a placeholder admin to own seeded data without exposing credentials
+    const seedOwnerPassword = await bcrypt.hash(randomUUID(), 12);
+    demoUser = await prisma.user.create({
+      data: {
+        email: `seed-owner+${randomUUID()}@example.com`,
+        name: 'Seed Owner',
+        password: seedOwnerPassword,
+        role: 'ADMIN'
+      }
+    });
+  } else {
+    console.log('\n👤 Creating demo user...');
+    demoUser = await prisma.user.upsert({
+      where: { email: demoEmail },
+      update: {},
+      create: {
+        email: demoEmail,
+        name: 'Demo User',
+        password: await bcrypt.hash(demoPassword, 12),
+        role: 'USER'
+      }
+    });
+    console.log('✅ Demo user created');
+  }
 
-  const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@nistmapper.com' },
-    update: {},
-    create: {
-      email: 'demo@nistmapper.com',
-      name: 'Demo User',
-      password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lwxw.ZhLT5KMHCKnq', // demo123
-      role: 'USER'
+  // ========================================================================
+  // CREATE CAPABILITY CENTRES
+  // ========================================================================
+
+  console.log('\n🏛️ Creating capability centres...');
+
+  const capabilityCentres = [
+    {
+      name: 'Cloud Operations',
+      code: 'CO',
+      description: 'Cloud infrastructure and platform services',
+      color: '#58a6ff',
+      icon: 'Cloud',
+      userId: demoUser.id
+    },
+    {
+      name: 'Digital Services',
+      code: 'DS',
+      description: 'Customer-facing digital products and services',
+      color: '#3fb950',
+      icon: 'Devices',
+      userId: demoUser.id
+    },
+    {
+      name: 'Enterprise Data',
+      code: 'ED',
+      description: 'Data management and analytics platforms',
+      color: '#a371f7',
+      icon: 'Storage',
+      userId: demoUser.id
     }
-  });
+  ];
 
-  console.log('✅ Demo user created');
+  const createdCapabilityCentres = [];
+  for (const cc of capabilityCentres) {
+    const created = await prisma.capabilityCentre.create({ data: cc });
+    createdCapabilityCentres.push(created);
+  }
+
+  console.log(`✅ Created ${createdCapabilityCentres.length} capability centres`);
 
   // ========================================================================
-  // CREATE SAMPLE PRODUCT
+  // CREATE FRAMEWORKS (within Capability Centres)
   // ========================================================================
 
-  console.log('\n🏢 Creating sample product...');
+  console.log('\n📁 Creating frameworks...');
 
-  const sampleProduct = await prisma.product.create({
-    data: {
+  const frameworks = [
+    // Cloud Operations frameworks
+    {
+      name: 'Infrastructure Services',
+      code: 'IS',
+      description: 'Core infrastructure and compute services',
+      color: '#58a6ff',
+      icon: 'Storage',
+      capabilityCentreId: createdCapabilityCentres[0].id // Cloud Operations
+    },
+    {
+      name: 'Platform Services',
+      code: 'PS',
+      description: 'Platform-as-a-Service offerings',
+      color: '#79c0ff',
+      icon: 'Cloud',
+      capabilityCentreId: createdCapabilityCentres[0].id // Cloud Operations
+    },
+    // Digital Services frameworks
+    {
+      name: 'E-Commerce',
+      code: 'EC',
+      description: 'Online retail and commerce platforms',
+      color: '#3fb950',
+      icon: 'ShoppingCart',
+      capabilityCentreId: createdCapabilityCentres[1].id // Digital Services
+    },
+    {
+      name: 'Mobile Applications',
+      code: 'MA',
+      description: 'Mobile app portfolio',
+      color: '#56d364',
+      icon: 'PhoneIphone',
+      capabilityCentreId: createdCapabilityCentres[1].id // Digital Services
+    },
+    // Enterprise Data frameworks
+    {
+      name: 'Data Warehousing',
+      code: 'DW',
+      description: 'Enterprise data warehouse and analytics',
+      color: '#a371f7',
+      icon: 'Analytics',
+      capabilityCentreId: createdCapabilityCentres[2].id // Enterprise Data
+    }
+  ];
+
+  const createdFrameworks = [];
+  for (const fw of frameworks) {
+    const created = await prisma.framework.create({ data: fw });
+    createdFrameworks.push(created);
+  }
+
+  console.log(`✅ Created ${createdFrameworks.length} frameworks`);
+
+  // ========================================================================
+  // CREATE PRODUCTS (within Frameworks)
+  // ========================================================================
+
+  console.log('\n🏢 Creating products...');
+
+  const products = [
+    // E-Commerce framework products
+    {
       name: 'E-Commerce Platform',
       description: 'Main customer-facing e-commerce web application with payment processing',
       type: 'WEB_APPLICATION',
       criticality: 'HIGH',
-      userId: demoUser.id
+      userId: demoUser.id,
+      frameworkId: createdFrameworks[2].id // E-Commerce
+    },
+    {
+      name: 'Order Management System',
+      description: 'Backend order processing and fulfillment system',
+      type: 'WEB_APPLICATION',
+      criticality: 'HIGH',
+      userId: demoUser.id,
+      frameworkId: createdFrameworks[2].id // E-Commerce
+    },
+    // Mobile Applications framework products
+    {
+      name: 'Customer Mobile App',
+      description: 'iOS and Android customer-facing mobile application',
+      type: 'MOBILE_APPLICATION',
+      criticality: 'MEDIUM',
+      userId: demoUser.id,
+      frameworkId: createdFrameworks[3].id // Mobile Applications
+    },
+    // Infrastructure Services framework products
+    {
+      name: 'Kubernetes Platform',
+      description: 'Container orchestration platform',
+      type: 'INFRASTRUCTURE',
+      criticality: 'CRITICAL',
+      userId: demoUser.id,
+      frameworkId: createdFrameworks[0].id // Infrastructure Services
+    },
+    // Data Warehousing framework products
+    {
+      name: 'Analytics Platform',
+      description: 'Business intelligence and reporting platform',
+      type: 'DATABASE',
+      criticality: 'MEDIUM',
+      userId: demoUser.id,
+      frameworkId: createdFrameworks[4].id // Data Warehousing
     }
-  });
+  ];
 
-  console.log('✅ Sample product created');
+  const createdProducts = [];
+  for (const product of products) {
+    const created = await prisma.product.create({ data: product });
+    createdProducts.push(created);
+  }
+
+  // Use first product (E-Commerce Platform) for baseline and assessments
+  const sampleProduct = createdProducts[0];
+
+  console.log(`✅ Created ${createdProducts.length} products`);
 
   // ========================================================================
   // CREATE SAMPLE SYSTEMS
@@ -490,7 +656,7 @@ async function main() {
             details: details,
             assessor: status === 'NOT_ASSESSED' ? null : assessor,
             assessedDate: status === 'NOT_ASSESSED' ? null : assessedDate,
-            evidence: evidence.length > 0 ? JSON.stringify(evidence) : null,
+            legacyEvidence: evidence.length > 0 ? JSON.stringify(evidence) : null,
             remediationPlan: remediationPlan
           }
         });
@@ -518,10 +684,24 @@ async function main() {
   console.log(`   ✓ ${controlsCreated} CSF 2.0 controls (subcategories)`);
   console.log(`   ✓ ${mappingsCreated} CSF-to-800-53 mappings`);
   console.log(`   ✓ 1 demo user (demo@nistmapper.com / demo123)`);
-  console.log(`   ✓ 1 sample product (${sampleProduct.name})`);
+  console.log(`   ✓ ${createdCapabilityCentres.length} capability centres`);
+  console.log(`   ✓ ${createdFrameworks.length} frameworks`);
+  console.log(`   ✓ ${createdProducts.length} products`);
   console.log(`   ✓ ${createdSystems.length} sample systems`);
   console.log(`   ✓ ${baselineCreated} baseline controls`);
   console.log(`   ✓ ${assessmentsCreated} compliance assessments`);
+  console.log('\n📁 Organizational Hierarchy:');
+  for (const cc of createdCapabilityCentres) {
+    console.log(`   🏛️ ${cc.name} (${cc.code})`);
+    const fws = createdFrameworks.filter(fw => fw.capabilityCentreId === cc.id);
+    for (const fw of fws) {
+      console.log(`      📁 ${fw.name} (${fw.code})`);
+      const prods = createdProducts.filter(p => p.frameworkId === fw.id);
+      for (const prod of prods) {
+        console.log(`         🏢 ${prod.name}`);
+      }
+    }
+  }
   console.log('\n🚀 Ready to start the application!');
   console.log('   Run: npm run dev');
   console.log('   Login: demo@nistmapper.com / demo123');

@@ -1,14 +1,14 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { prisma } from '../prisma';
 import { z } from 'zod';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
+import { config } from '../config';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+const JWT_EXPIRES_IN = config.jwtExpiresIn as SignOptions['expiresIn'];
 
 // Validation schemas
 const registerSchema = z.object({
@@ -62,7 +62,7 @@ router.post('/register', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
+      config.jwtSecret,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
@@ -89,28 +89,34 @@ router.post('/login', async (req, res) => {
     const validatedData = loginSchema.parse(req.body);
     const { email, password } = validatedData;
 
-    // Demo user for development
-    if (email === 'demo@nistmapper.com' && password === 'demo123') {
+    // Demo user for non-production environments (explicitly disabled in production)
+    if (config.enableDemoLogin && email === config.demoEmail && password === config.demoPassword) {
       // Check if demo user exists, create if not
       let demoUser = await prisma.user.findUnique({
-        where: { email: 'demo@nistmapper.com' }
+        where: { email: config.demoEmail }
       });
 
+      const hashedPassword = await bcrypt.hash(config.demoPassword, 12);
       if (!demoUser) {
-        const hashedPassword = await bcrypt.hash('demo123', 12);
         demoUser = await prisma.user.create({
           data: {
-            email: 'demo@nistmapper.com',
+            email: config.demoEmail,
             password: hashedPassword,
             name: 'Demo User',
-            role: 'USER'
+            role: 'ADMIN'
           }
+        });
+      } else {
+        // Always sync demo user password and role with config
+        demoUser = await prisma.user.update({
+          where: { email: config.demoEmail },
+          data: { password: hashedPassword, role: 'ADMIN' }
         });
       }
 
       const token = jwt.sign(
         { userId: demoUser.id, email: demoUser.email },
-        JWT_SECRET,
+        config.jwtSecret,
         { expiresIn: JWT_EXPIRES_IN }
       );
 
@@ -151,7 +157,7 @@ router.post('/login', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
+      config.jwtSecret,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
@@ -211,6 +217,38 @@ router.post('/logout', (req, res) => {
   // In a JWT-based system, logout is typically handled client-side
   // by removing the token from storage
   res.json({ message: 'Logout successful' });
+});
+
+// GET /api/auth/users - List all users (for assignments, mentions, etc.)
+router.get('/users', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { search } = req.query;
+
+    const whereClause: any = {};
+    if (search && typeof search === 'string' && search.length >= 2) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { name: 'asc' },
+      take: 50, // Limit results
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('List users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
 });
 
 // PUT /api/auth/change-password - Change user password

@@ -2,12 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import * as path from 'path';
 import * as os from 'os';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { storageService } from '../services/storage.service';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Configure multer for file uploads
 const upload = multer({

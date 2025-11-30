@@ -9,7 +9,10 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResp
 import { logger } from './logger';
 
 // API Base URL from environment or default
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// In production, use empty string for relative URLs (same origin)
+// In development, default to localhost:3001
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
 
 /**
  * Create and configure axios instance

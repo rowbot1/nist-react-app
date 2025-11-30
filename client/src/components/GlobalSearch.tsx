@@ -329,15 +329,6 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => 
                 clickable
               />
               <Chip
-                label="Assessments"
-                icon={<AssessmentIcon />}
-                onClick={() => {
-                  navigate('/assessments');
-                  onClose();
-                }}
-                clickable
-              />
-              <Chip
                 label="Analytics"
                 onClick={() => {
                   navigate('/analytics');

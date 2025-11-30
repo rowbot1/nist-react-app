@@ -19,9 +19,78 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products Product[]
+  products          Product[]
+  capabilityCentres CapabilityCentre[]
+
+  // Collaboration features
+  assignedTasks       RemediationTask[] @relation("AssignedTasks")
+  createdTasks        RemediationTask[] @relation("CreatedTasks")
+  comments            Comment[]
+  controlAssignments  ControlAssignment[]
 
   @@map("users")
+}
+
+// ============================================================================
+// ORGANIZATIONAL HIERARCHY - Capability Centre > Framework > Product > System
+// ============================================================================
+
+model CapabilityCentre {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  code        String?  // Short code like "CO" for Cloud Operations
+  color       String?  // For UI display (hex color)
+  icon        String?  // Icon name for UI
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  frameworks Framework[]
+
+  // Cached compliance metrics (updated on assessment changes)
+  cachedComplianceScore   Int?      @default(0)  // 0-100 percentage
+  cachedTotalAssessments  Int?      @default(0)
+  cachedCompliantCount    Int?      @default(0)
+  cachedPartialCount      Int?      @default(0)
+  cachedNonCompliantCount Int?      @default(0)
+  cachedNotAssessedCount  Int?      @default(0)
+  scoreLastComputedAt     DateTime?
+
+  @@index([userId, cachedComplianceScore])
+  @@map("capability_centres")
+}
+
+model Framework {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  code        String?  // Short code like "FIN" for Finance Framework
+  color       String?  // For UI display (hex color)
+  icon        String?  // Icon name for UI
+  isUnassigned Boolean @default(false) // Auto-generated "Unassigned" framework for orphan products
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  capabilityCentreId String
+  capabilityCentre   CapabilityCentre @relation(fields: [capabilityCentreId], references: [id], onDelete: Cascade)
+
+  products           Product[]
+  baselineTemplates  FrameworkBaselineTemplate[]
+
+  // Cached compliance metrics (updated on assessment changes)
+  cachedComplianceScore   Int?      @default(0)  // 0-100 percentage
+  cachedTotalAssessments  Int?      @default(0)
+  cachedCompliantCount    Int?      @default(0)
+  cachedPartialCount      Int?      @default(0)
+  cachedNonCompliantCount Int?      @default(0)
+  cachedNotAssessedCount  Int?      @default(0)
+  scoreLastComputedAt     DateTime?
+
+  @@index([capabilityCentreId, cachedComplianceScore])
+  @@map("frameworks")
 }
 
 model Product {
@@ -30,15 +99,30 @@ model Product {
   description String?
   type        String   @default("WEB_APPLICATION")
   criticality String   @default("MEDIUM")
+  impactLevel String   @default("MODERATE") // FIPS 199: LOW, MODERATE, HIGH
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  frameworkId String
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Restrict)
+
   systems     System[]
   csfBaseline CSFBaseline[]
 
+  // Cached compliance metrics (updated on assessment changes)
+  cachedComplianceScore   Int?      @default(0)  // 0-100 percentage
+  cachedTotalAssessments  Int?      @default(0)
+  cachedCompliantCount    Int?      @default(0)
+  cachedPartialCount      Int?      @default(0)
+  cachedNonCompliantCount Int?      @default(0)
+  cachedNotAssessedCount  Int?      @default(0)
+  scoreLastComputedAt     DateTime?
+
+  @@index([userId, cachedComplianceScore])
+  @@index([frameworkId, cachedComplianceScore])
   @@map("products")
 }
 
@@ -57,6 +141,16 @@ model System {
 
   assessments ComplianceAssessment[]
 
+  // Cached compliance metrics (updated on assessment changes)
+  cachedComplianceScore   Int?      @default(0)  // 0-100 percentage
+  cachedTotalAssessments  Int?      @default(0)
+  cachedCompliantCount    Int?      @default(0)
+  cachedPartialCount      Int?      @default(0)
+  cachedNonCompliantCount Int?      @default(0)
+  cachedNotAssessedCount  Int?      @default(0)
+  scoreLastComputedAt     DateTime?
+
+  @@index([productId, cachedComplianceScore])
   @@map("systems")
 }
 
@@ -76,6 +170,30 @@ model CSFBaseline {
   @@map("csf_baselines")
 }
 
+// ============================================================================
+// FRAMEWORK BASELINE TEMPLATES - Reusable baseline configurations
+// ============================================================================
+
+model FrameworkBaselineTemplate {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "Standard Enterprise", "Minimal", "Full CSF 2.0"
+  description String?
+  isDefault   Boolean  @default(false) // The default template for new products in this framework
+
+  frameworkId String
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  // Template configuration - JSON array of baseline items
+  // Structure: [{ subcategoryId, applicable, categoryLevel, justification }]
+  templateData String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([frameworkId])
+  @@map("framework_baseline_templates")
+}
+
 model ComplianceAssessment {
   id              String    @id @default(uuid())
   subcategoryId   String
@@ -85,13 +203,17 @@ model ComplianceAssessment {
   assessedDate    DateTime?
   legacyEvidence  String?   @map("evidence") // Legacy JSON array - migrating to Evidence model
   remediationPlan String?
+  riskLevel       String?
+  targetDate      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   systemId String
   system   System @relation(fields: [systemId], references: [id], onDelete: Cascade)
 
-  evidenceFiles Evidence[]
+  evidenceFiles    Evidence[]
+  remediationTasks RemediationTask[]
+  comments         Comment[]
 
   @@unique([systemId, subcategoryId])
   @@map("compliance_assessments")
@@ -139,18 +261,282 @@ model Evidence {
   uploadedBy   String   // User ID who uploaded
   uploadedAt   DateTime @default(now())
 
+  // Evidence expiration tracking
+  evidenceType String   @default("OTHER") // PENETRATION_TEST, VULNERABILITY_SCAN, POLICY_DOCUMENT, AUDIT_REPORT, SCREENSHOT, CONFIGURATION, OTHER
+  validFrom    DateTime? // When this evidence became valid
+  expiresAt    DateTime? // When this evidence expires (e.g., pen test valid for 1 year)
+  isExpired    Boolean  @default(false) // Computed field for quick queries
+
   @@index([assessmentId])
+  @@index([expiresAt])
+  @@index([evidenceType])
   @@map("evidence")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  userName    String   // Denormalized for performance
+  userEmail   String   // Denormalized for audit trails
+
+  action      String   // CREATE, UPDATE, DELETE, VIEW, EXPORT, LOGIN, LOGOUT
+  entityType  String   // Product, System, Assessment, Framework, Evidence, Baseline, User
+  entityId    String?  // ID of the affected entity
+  entityName  String?  // Denormalized name for readability
+
+  // Change tracking
+  previousValue String? // JSON of previous state (for updates)
+  newValue      String? // JSON of new state (for creates/updates)
+  changedFields String? // JSON array of changed field names
+
+  // Context
+  ipAddress   String?
+  userAgent   String?
+  sessionId   String?
+
+  // Metadata
+  details     String?  // Additional context in JSON format
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// REMEDIATION TRACKING
+// ============================================================================
+
+model RemediationTask {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  status       String    @default("OPEN") // OPEN, IN_PROGRESS, BLOCKED, COMPLETED, CANCELLED
+  priority     String    @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  dueDate      DateTime?
+  completedAt  DateTime?
+
+  // External tracking
+  externalTicketId   String?  // Jira/ServiceNow ticket ID
+  externalTicketUrl  String?  // URL to external ticket
+
+  // Progress tracking
+  estimatedHours     Float?
+  actualHours        Float?
+  percentComplete    Int      @default(0)
+
+  // Relationships
+  assessmentId String
+  assessment   ComplianceAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  assigneeId   String?
+  assignee     User?   @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  createdById  String
+  createdBy    User    @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Task updates/history
+  updates      TaskUpdate[]
+
+  @@index([assessmentId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("remediation_tasks")
+}
+
+model TaskUpdate {
+  id          String   @id @default(uuid())
+  taskId      String
+  task        RemediationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  content     String   // Update note/description
+  oldStatus   String?  // Previous status if changed
+  newStatus   String?  // New status if changed
+  hoursLogged Float?   // Hours logged with this update
+
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
+  @@map("task_updates")
+}
+
+// ============================================================================
+// COLLABORATION - COMMENTS & MENTIONS
+// ============================================================================
+
+model Comment {
+  id           String   @id @default(uuid())
+  content      String
+
+  // Polymorphic relationship - can be on assessment or task
+  assessmentId String?
+  assessment   ComplianceAssessment? @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  // Author
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Threading
+  parentId     String?
+  parent       Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[] @relation("CommentReplies")
+
+  // Mentions (stored as JSON array of user IDs)
+  mentions     String?  // JSON array of mentioned user IDs
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([assessmentId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ============================================================================
+// CONTROL ASSIGNMENT - WHO OWNS WHAT
+// ============================================================================
+
+model ControlAssignment {
+  id            String   @id @default(uuid())
+
+  // What control pattern this assignment covers
+  controlPattern String  // e.g., "PR.AC.*" for all PR.AC controls, or "PR.AC-01" for specific
+
+  // Who owns it
+  assigneeId    String
+  assignee      User     @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+
+  // Scope - which product this applies to
+  productId     String
+
+  // Optional: specific system within the product
+  systemId      String?
+
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([productId, systemId, controlPattern, assigneeId])
+  @@index([assigneeId])
+  @@index([productId])
+  @@map("control_assignments")
+}
+
+// ============================================================================
+// ASSESSMENT TEMPLATES - FOR BULK ASSESSMENT
+// ============================================================================
+
+model AssessmentTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+
+  // Template type - what kind of system this is for
+  systemType  String?  // e.g., "WEB_SERVER", "DATABASE", "FIREWALL"
+
+  // The template data - JSON containing default assessments
+  // Structure: { "controlId": { status, details, evidence notes } }
+  templateData String
+
+  // Who created it
+  createdById  String
+
+  // Is this a shared template or personal?
+  isShared     Boolean @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([systemType])
+  @@map("assessment_templates")
+}
+
+// ============================================================================
+// EVIDENCE EXPIRATION TRACKING
+// ============================================================================
+
+// Add expiration tracking to Evidence model (extend existing)
+// Note: Evidence model already exists, we'll add expiration via migration
+
+// ============================================================================
+// REPORTING - SAVED REPORTS
+// ============================================================================
+
+model SavedReport {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+
+  // Report type
+  reportType  String   // EXECUTIVE_SUMMARY, GAP_ANALYSIS, COMPLIANCE_PROGRESS, RISK_ASSESSMENT
+
+  // Report configuration (JSON)
+  config      String   // Filters, date ranges, included products/systems
+
+  // Scheduling
+  isScheduled Boolean  @default(false)
+  schedule    String?  // Cron expression for scheduled reports
+  lastRunAt   DateTime?
+
+  // Output
+  lastOutput  String?  // Path to last generated report file
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([reportType])
+  @@map("saved_reports")
+}
+
+// ============================================================================
+// RISK SCORING CONFIGURATION
+// ============================================================================
+
+model RiskConfig {
+  id          String   @id @default(uuid())
+  productId   String   @unique
+
+  // Weight configuration for risk calculation (JSON)
+  // Structure: { controlCriticalityWeight, systemCriticalityWeight, dataClassificationWeight }
+  weights     String
+
+  // Custom control priorities (JSON)
+  // Structure: { "controlId": priorityScore }
+  customPriorities String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("risk_configs")
 }
 
 // Enums are replaced with string fields for SQLite compatibility
 // Valid values are enforced in the application layer:
-// 
+//
 // Role: USER, ADMIN, AUDITOR
-// ProductType: WEB_APPLICATION, MOBILE_APPLICATION, INFRASTRUCTURE, CLOUD_SERVICE, 
+// ProductType: WEB_APPLICATION, MOBILE_APPLICATION, INFRASTRUCTURE, CLOUD_SERVICE,
 //              API_SERVICE, DATABASE, NETWORK_DEVICE, SECURITY_TOOL, OTHER
 // Criticality: LOW, MEDIUM, HIGH, CRITICAL
+// ImpactLevel: LOW, MODERATE, HIGH (FIPS 199 security categorization)
 // Environment: DEVELOPMENT, STAGING, PRODUCTION, TEST
 // DataClassification: PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
 // CategoryLevel: MUST_HAVE, SHOULD_HAVE
 // ComplianceStatus: NOT_ASSESSED, COMPLIANT, PARTIALLY_COMPLIANT, NON_COMPLIANT, NOT_APPLICABLE
+// AuditAction: CREATE, UPDATE, DELETE, VIEW, EXPORT, LOGIN, LOGOUT
+// AuditEntityType: Product, System, Assessment, Framework, Evidence, Baseline, User
+// TaskStatus: OPEN, IN_PROGRESS, BLOCKED, COMPLETED, CANCELLED
+// TaskPriority: LOW, MEDIUM, HIGH, CRITICAL
+// ReportType: EXECUTIVE_SUMMARY, GAP_ANALYSIS, COMPLIANCE_PROGRESS, RISK_ASSESSMENT

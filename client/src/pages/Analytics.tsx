@@ -27,6 +27,9 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Collapse,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -37,6 +40,14 @@ import {
   Download as DownloadIcon,
   Info as InfoIcon,
   Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Error as ErrorIcon,
+  Remove as StableIcon,
+  Business as CCIcon,
+  AccountTree as FrameworkIcon,
+  Inventory as ProductIcon,
+  Computer as SystemIcon,
 } from '@mui/icons-material';
 import { RiskHeatMap } from '../components/RiskHeatMap';
 import {
@@ -53,9 +64,6 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
 } from 'recharts';
@@ -66,7 +74,9 @@ import {
   useGapAnalysis,
   useProducts,
 } from '../hooks';
-import type { ComplianceStatus } from '../types/api.types';
+import { useOrganizationalHierarchy } from '../hooks/useCapabilityCentres';
+import type { ComplianceStatus, HierarchyCapabilityCentre, HierarchyFramework, HierarchyProduct, HierarchySystem } from '../types/api.types';
+import { useNavigate } from 'react-router-dom';
 
 // Color scheme for charts
 const COLORS = {
@@ -82,9 +92,199 @@ const COLORS = {
   'Not Applicable': '#d1d5db',
 };
 
+// Helper to get compliance status indicator
+const getComplianceIndicator = (score: number, assessmentCount?: number) => {
+  if (assessmentCount === 0) return { icon: <StableIcon fontSize="small" />, color: '#6b7280', label: 'Not Assessed' };
+  if (score >= 80) return { icon: <CheckCircleIcon fontSize="small" />, color: '#22c55e', label: 'Compliant' };
+  if (score >= 60) return { icon: <WarningIcon fontSize="small" />, color: '#f59e0b', label: 'Partial' };
+  return { icon: <ErrorIcon fontSize="small" />, color: '#ef4444', label: 'Needs Attention' };
+};
+
+// Hierarchical Row Component for expandable table
+interface HierarchyRowProps {
+  level: 'cc' | 'framework' | 'product' | 'system';
+  data: HierarchyCapabilityCentre | HierarchyFramework | HierarchyProduct | HierarchySystem;
+  depth: number;
+  onNavigate?: (path: string) => void;
+  productId?: string; // For system rows, to enable navigation to assessments
+}
+
+const HierarchyRow: React.FC<HierarchyRowProps & { children?: React.ReactNode }> = ({
+  level,
+  data,
+  depth,
+  onNavigate,
+  productId,
+  children
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const hasChildren = children !== undefined;
+
+  const score = data.complianceScore || 0;
+  const assessmentCount = 'assessmentCount' in data ? data.assessmentCount : undefined;
+  const indicator = getComplianceIndicator(score, assessmentCount);
+
+  const icons = {
+    cc: <CCIcon sx={{ color: '#6366f1' }} />,
+    framework: <FrameworkIcon sx={{ color: '#8b5cf6' }} />,
+    product: <ProductIcon sx={{ color: '#0ea5e9' }} />,
+    system: <SystemIcon sx={{ color: '#14b8a6' }} />,
+  };
+
+  const getSubtitle = () => {
+    if (level === 'cc') {
+      const cc = data as HierarchyCapabilityCentre;
+      return `${cc.frameworkCount} frameworks`;
+    }
+    if (level === 'framework') {
+      const fw = data as HierarchyFramework;
+      return `${fw.productCount} products`;
+    }
+    if (level === 'product') {
+      const prod = data as HierarchyProduct;
+      return `${prod.systemCount} systems`;
+    }
+    if (level === 'system') {
+      const sys = data as HierarchySystem;
+      return `${sys.environment} - ${sys.criticality}`;
+    }
+    return '';
+  };
+
+  const isClickable = level === 'product' || level === 'system';
+
+  const handleRowClick = () => {
+    if (!onNavigate) return;
+    if (level === 'product') {
+      onNavigate(`/products/${data.id}`);
+    } else if (level === 'system' && productId) {
+      onNavigate(`/products/${productId}/assessments?systemId=${data.id}`);
+    }
+  };
+
+  const handleSystemsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onNavigate) return;
+    if (level === 'product') {
+      onNavigate(`/products/${data.id}`);
+    }
+  };
+
+  const handleAssessmentsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onNavigate) return;
+    if (level === 'system' && productId) {
+      onNavigate(`/products/${productId}/assessments?systemId=${data.id}`);
+    }
+  };
+
+  return (
+    <>
+      <TableRow
+        hover
+        sx={{
+          '& > td': { borderBottom: expanded ? 'none' : undefined },
+          cursor: isClickable ? 'pointer' : 'default',
+          bgcolor: depth === 0 ? 'grey.50' : depth === 1 ? 'grey.25' : 'transparent',
+          '&:hover': isClickable ? { bgcolor: 'action.hover' } : {},
+        }}
+        onClick={isClickable ? handleRowClick : undefined}
+      >
+        <TableCell sx={{ pl: 2 + depth * 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {hasChildren && (
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
+                {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </IconButton>
+            )}
+            {!hasChildren && <Box sx={{ width: 28 }} />}
+            {icons[level]}
+            <Box>
+              <Typography variant="body2" fontWeight={depth < 2 ? 'bold' : 'normal'}>
+                {data.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {getSubtitle()}
+              </Typography>
+            </Box>
+          </Box>
+        </TableCell>
+        <TableCell align="center">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            <Box sx={{ color: indicator.color }}>{indicator.icon}</Box>
+            <Typography variant="body2" sx={{ color: indicator.color, fontWeight: 'bold' }}>
+              {score}%
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell align="center">
+          <Chip
+            label={indicator.label}
+            size="small"
+            sx={{
+              bgcolor: `${indicator.color}20`,
+              color: indicator.color,
+              fontWeight: 'medium',
+            }}
+          />
+        </TableCell>
+        <TableCell align="right">
+          {level === 'system' && (
+            <Chip
+              label={`${(data as HierarchySystem).assessmentCount} assessments`}
+              size="small"
+              variant="outlined"
+              onClick={handleAssessmentsClick}
+              sx={{
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'primary.light', color: 'primary.contrastText' },
+              }}
+            />
+          )}
+          {level === 'product' && (
+            <Chip
+              label={`${(data as HierarchyProduct).systemCount} systems`}
+              size="small"
+              variant="outlined"
+              onClick={handleSystemsClick}
+              sx={{
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'primary.light', color: 'primary.contrastText' },
+              }}
+            />
+          )}
+          {level === 'framework' && (
+            <Typography variant="body2" color="text.secondary">
+              {(data as HierarchyFramework).productCount} products
+            </Typography>
+          )}
+          {level === 'cc' && (
+            <Typography variant="body2" color="text.secondary">
+              {(data as HierarchyCapabilityCentre).frameworkCount} frameworks
+            </Typography>
+          )}
+        </TableCell>
+      </TableRow>
+      {hasChildren && (
+        <TableRow>
+          <TableCell colSpan={4} sx={{ p: 0, border: 0 }}>
+            <Collapse in={expanded} timeout="auto" unmountOnExit>
+              <Table size="small">
+                <TableBody>{children}</TableBody>
+              </Table>
+            </Collapse>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+};
+
 const Analytics: React.FC = () => {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<number>(30);
   const [selectedProductId, setSelectedProductId] = useState<string>('all');
+  const [selectedCCId, setSelectedCCId] = useState<string>('all');
   const [heatmapDialogOpen, setHeatmapDialogOpen] = useState(false);
   const [selectedHeatmapCell, setSelectedHeatmapCell] = useState<{
     functionCode: string;
@@ -102,8 +302,21 @@ const Analytics: React.FC = () => {
     { enabled: selectedProductId !== 'all' }
   );
   const { data: products } = useProducts();
+  const { data: hierarchy, isLoading: hierarchyLoading } = useOrganizationalHierarchy();
 
-  const isLoading = overviewLoading || trendsLoading || functionLoading;
+  const isLoading = overviewLoading || trendsLoading || functionLoading || hierarchyLoading;
+
+  // Handle CC filter change
+  const handleCCChange = (event: SelectChangeEvent<string>) => {
+    setSelectedCCId(event.target.value);
+  };
+
+  // Filter hierarchy based on selected CC
+  const filteredHierarchy = useMemo(() => {
+    if (!hierarchy) return [];
+    if (selectedCCId === 'all') return hierarchy;
+    return hierarchy.filter(cc => cc.id === selectedCCId);
+  }, [hierarchy, selectedCCId]);
 
   // Handle date range change
   const handleDateRangeChange = (event: SelectChangeEvent<number>) => {
@@ -123,38 +336,173 @@ const Analytics: React.FC = () => {
     return latest - previous;
   }, [trends]);
 
-  // Prepare radar chart data
+  // Prepare radar chart data for Capability Centres
   const radarData = useMemo(() => {
-    if (!functionCompliance) return [];
-    return functionCompliance.map((func) => ({
-      function: func.functionCode,
-      compliance: Math.round(func.complianceScore),
+    if (!hierarchy || hierarchy.length === 0) return [];
+    return hierarchy.map((cc) => ({
+      function: cc.name.length > 15 ? cc.name.substring(0, 15) + '...' : cc.name,
+      fullName: cc.name,
+      compliance: Math.round(cc.complianceScore || 0),
       fullMark: 100,
     }));
-  }, [functionCompliance]);
+  }, [hierarchy]);
 
-  // Prepare status distribution data for pie chart
-  const statusData = useMemo(() => {
-    if (!overview) return [];
-    const statusMap = overview.complianceByStatus;
-    return Object.entries(statusMap).map(([status, count]) => ({
-      name: status,
-      value: count,
+  // Prepare system status distribution by Capability Centre for stacked bar chart
+  const ccStatusDistribution = useMemo(() => {
+    if (!hierarchy || hierarchy.length === 0) return [];
+
+    return hierarchy.map((cc) => {
+      // Count systems by compliance level within this CC
+      let compliant = 0;
+      let partial = 0;
+      let needsAttention = 0;
+      let notAssessed = 0;
+
+      cc.frameworks.forEach((framework) => {
+        framework.products.forEach((product) => {
+          product.systems.forEach((system) => {
+            const score = system.complianceScore || 0;
+            if (system.assessmentCount === 0) {
+              notAssessed++;
+            } else if (score >= 80) {
+              compliant++;
+            } else if (score >= 60) {
+              partial++;
+            } else {
+              needsAttention++;
+            }
+          });
+        });
+      });
+
+      const total = compliant + partial + needsAttention + notAssessed;
+
+      return {
+        name: cc.name.length > 20 ? cc.name.substring(0, 20) + '...' : cc.name,
+        fullName: cc.name,
+        Compliant: compliant,
+        Partial: partial,
+        'Needs Attention': needsAttention,
+        'Not Assessed': notAssessed,
+        total,
+      };
+    });
+  }, [hierarchy]);
+
+  // Prepare Framework compliance bar chart data - aggregate by framework NAME to combine same-named frameworks
+  const frameworkComplianceData = useMemo(() => {
+    if (!filteredHierarchy || filteredHierarchy.length === 0) return [];
+
+    // Use a Map to aggregate frameworks by NAME (combining same-named frameworks across CCs)
+    const frameworkMap = new Map<string, {
+      name: string;
+      fullName: string;
+      scores: number[];
+      ccNames: string[];
+      productCount: number;
+      systemCount: number;
+    }>();
+
+    filteredHierarchy.forEach((cc) => {
+      cc.frameworks.forEach((fw) => {
+        const key = fw.name.toLowerCase(); // Aggregate by name (case-insensitive)
+        const existing = frameworkMap.get(key);
+        if (existing) {
+          // Aggregate: add score and CC name, sum products
+          existing.scores.push(fw.complianceScore || 0);
+          if (!existing.ccNames.includes(cc.name)) {
+            existing.ccNames.push(cc.name);
+          }
+          existing.productCount += fw.productCount;
+          // Count systems from products
+          fw.products.forEach(p => {
+            existing.systemCount += p.systemCount;
+          });
+        } else {
+          let systemCount = 0;
+          fw.products.forEach(p => {
+            systemCount += p.systemCount;
+          });
+          frameworkMap.set(key, {
+            name: fw.name.length > 18 ? fw.name.substring(0, 18) + '...' : fw.name,
+            fullName: fw.name,
+            scores: [fw.complianceScore || 0],
+            ccNames: [cc.name],
+            productCount: fw.productCount,
+            systemCount,
+          });
+        }
+      });
+    });
+
+    // Convert to array and calculate average score
+    const frameworks = Array.from(frameworkMap.values()).map((fw) => ({
+      name: fw.name,
+      fullName: fw.fullName,
+      score: Math.round(fw.scores.reduce((a, b) => a + b, 0) / fw.scores.length),
+      ccName: fw.ccNames.length > 2
+        ? `${fw.ccNames.slice(0, 2).join(', ')} +${fw.ccNames.length - 2} more`
+        : fw.ccNames.join(', '),
+      productCount: fw.productCount,
+      systemCount: fw.systemCount,
     }));
-  }, [overview]);
 
-  // Prepare product compliance bar chart data
-  const productComplianceData = useMemo(() => {
-    if (!products) return [];
-    return products
-      .filter((p) => p.complianceScore !== undefined)
-      .map((product) => ({
-        name: product.name.length > 20 ? product.name.substring(0, 20) + '...' : product.name,
-        fullName: product.name,
-        score: Math.round(product.complianceScore || 0),
-      }))
-      .sort((a, b) => a.score - b.score); // Sort by score (lowest first)
-  }, [products]);
+    return frameworks.sort((a, b) => a.score - b.score); // Sort by score (lowest first)
+  }, [filteredHierarchy]);
+
+  // Compute "Attention Required" data - systems needing immediate attention
+  const attentionRequired = useMemo(() => {
+    if (!hierarchy || hierarchy.length === 0) {
+      return {
+        criticalSystems: [] as { name: string; score: number; ccName: string; frameworkName: string; productName: string; productId: string }[],
+        unassessedSystems: [] as { name: string; ccName: string; frameworkName: string; productName: string; productId: string }[],
+        decliningFrameworks: [] as { name: string; ccName: string; score: number }[],
+        totalCritical: 0,
+        totalUnassessed: 0,
+      };
+    }
+
+    const criticalSystems: { name: string; score: number; ccName: string; frameworkName: string; productName: string; productId: string }[] = [];
+    const unassessedSystems: { name: string; ccName: string; frameworkName: string; productName: string; productId: string }[] = [];
+
+    hierarchy.forEach((cc) => {
+      cc.frameworks.forEach((fw) => {
+        fw.products.forEach((product) => {
+          product.systems.forEach((system) => {
+            if (system.assessmentCount === 0) {
+              unassessedSystems.push({
+                name: system.name,
+                ccName: cc.name,
+                frameworkName: fw.name,
+                productName: product.name,
+                productId: product.id,
+              });
+            } else if (system.complianceScore < 60) {
+              criticalSystems.push({
+                name: system.name,
+                score: system.complianceScore,
+                ccName: cc.name,
+                frameworkName: fw.name,
+                productName: product.name,
+                productId: product.id,
+              });
+            }
+          });
+        });
+      });
+    });
+
+    // Sort critical systems by score (worst first)
+    criticalSystems.sort((a, b) => a.score - b.score);
+
+    return {
+      criticalSystems: criticalSystems.slice(0, 5), // Top 5 worst
+      unassessedSystems: unassessedSystems.slice(0, 5), // Top 5 unassessed
+      decliningFrameworks: [], // Would need historical data to compute
+      totalCritical: criticalSystems.length,
+      totalUnassessed: unassessedSystems.length,
+    };
+  }, [hierarchy]);
 
   // Prepare top gaps data
   const topGaps = useMemo(() => {
@@ -223,6 +571,17 @@ const Analytics: React.FC = () => {
           Compliance Analytics
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Capability Centre</InputLabel>
+            <Select value={selectedCCId} label="Capability Centre" onChange={handleCCChange}>
+              <MenuItem value="all">All Capability Centres</MenuItem>
+              {hierarchy?.map((cc) => (
+                <MenuItem key={cc.id} value={cc.id}>
+                  {cc.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Date Range</InputLabel>
             <Select value={dateRange} label="Date Range" onChange={handleDateRangeChange}>
@@ -362,14 +721,136 @@ const Analytics: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Attention Required Section */}
+      {(attentionRequired.totalCritical > 0 || attentionRequired.totalUnassessed > 0) && (
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12}>
+            <Alert
+              severity="warning"
+              sx={{
+                '& .MuiAlert-message': { width: '100%' },
+                bgcolor: 'warning.light',
+                border: '1px solid',
+                borderColor: 'warning.main',
+              }}
+            >
+              <AlertTitle sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                Attention Required
+              </AlertTitle>
+              <Grid container spacing={3}>
+                {/* Critical Systems */}
+                {attentionRequired.totalCritical > 0 && (
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <ErrorIcon color="error" />
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {attentionRequired.totalCritical} Systems Below 60% Compliance
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {attentionRequired.criticalSystems.map((sys, idx) => (
+                        <Box
+                          key={idx}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            p: 1,
+                            bgcolor: 'background.paper',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'action.hover' },
+                          }}
+                          onClick={() => navigate(`/products/${sys.productId}`)}
+                        >
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {sys.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {sys.ccName} → {sys.frameworkName} → {sys.productName}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={`${sys.score}%`}
+                            size="small"
+                            color="error"
+                            sx={{ fontWeight: 'bold' }}
+                          />
+                        </Box>
+                      ))}
+                      {attentionRequired.totalCritical > 5 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                          +{attentionRequired.totalCritical - 5} more systems need attention
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* Unassessed Systems */}
+                {attentionRequired.totalUnassessed > 0 && (
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <StableIcon color="action" />
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {attentionRequired.totalUnassessed} Systems Not Yet Assessed
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {attentionRequired.unassessedSystems.map((sys, idx) => (
+                        <Box
+                          key={idx}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            p: 1,
+                            bgcolor: 'background.paper',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'action.hover' },
+                          }}
+                          onClick={() => navigate(`/products/${sys.productId}`)}
+                        >
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {sys.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {sys.ccName} → {sys.frameworkName} → {sys.productName}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label="Not Assessed"
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontWeight: 'medium' }}
+                          />
+                        </Box>
+                      ))}
+                      {attentionRequired.totalUnassessed > 5 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                          +{attentionRequired.totalUnassessed - 5} more systems need assessment
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Alert>
+          </Grid>
+        </Grid>
+      )}
+
       {/* Charts Section - Row 1 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Compliance by Function (Radar Chart) */}
+        {/* Compliance by Capability Centre (Radar Chart) */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Compliance by Function
+                Compliance by Capability Centre
               </Typography>
               <ResponsiveContainer width="100%" height={350}>
                 <RadarChart data={radarData}>
@@ -383,7 +864,24 @@ const Analytics: React.FC = () => {
                     fill="#3b82f6"
                     fillOpacity={0.6}
                   />
-                  <RechartsTooltip />
+                  <RechartsTooltip
+                    content={({ payload }) => {
+                      if (payload && payload.length > 0) {
+                        const data = payload[0].payload;
+                        return (
+                          <Paper sx={{ p: 1 }}>
+                            <Typography variant="body2" fontWeight="bold">
+                              {data.fullName}
+                            </Typography>
+                            <Typography variant="body2">
+                              Compliance: {data.compliance}%
+                            </Typography>
+                          </Paper>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   <Legend />
                 </RadarChart>
               </ResponsiveContainer>
@@ -434,71 +932,41 @@ const Analytics: React.FC = () => {
 
       {/* Charts Section - Row 2 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Assessment Status Distribution (Donut Chart) */}
+        {/* Systems by Status per Capability Centre (Stacked Bar Chart) */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Assessment Status Distribution
+                Systems by Status per Capability Centre
               </Typography>
               <ResponsiveContainer width="100%" height={350}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[entry.name as keyof typeof COLORS] || '#6b7280'}
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Typography variant="h4" fontWeight="bold">
-                  {overview?.totalAssessments || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ ml: 1, alignSelf: 'center' }}>
-                  Total Assessments
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Compliance by Product (Horizontal Bar Chart) */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Compliance by Product
-              </Typography>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={productComplianceData} layout="vertical">
+                <BarChart data={ccStatusDistribution} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 100]} />
-                  <YAxis type="category" dataKey="name" width={150} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="name" width={120} />
                   <RechartsTooltip
-                    content={({ payload }) => {
+                    content={({ payload, label }) => {
                       if (payload && payload.length > 0) {
                         const data = payload[0].payload;
                         return (
-                          <Paper sx={{ p: 1 }}>
-                            <Typography variant="body2" fontWeight="bold">
+                          <Paper sx={{ p: 1.5 }}>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
                               {data.fullName}
                             </Typography>
-                            <Typography variant="body2">
-                              Compliance: {data.score}%
+                            <Typography variant="body2" sx={{ color: '#22c55e' }}>
+                              Compliant: {data.Compliant} systems
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#f59e0b' }}>
+                              Partial: {data.Partial} systems
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#ef4444' }}>
+                              Needs Attention: {data['Needs Attention']} systems
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#6b7280' }}>
+                              Not Assessed: {data['Not Assessed']} systems
+                            </Typography>
+                            <Typography variant="body2" fontWeight="bold" sx={{ mt: 1, borderTop: '1px solid #eee', pt: 1 }}>
+                              Total: {data.total} systems
                             </Typography>
                           </Paper>
                         );
@@ -507,9 +975,175 @@ const Analytics: React.FC = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="score" name="Compliance %" fill="#3b82f6" />
+                  <Bar dataKey="Compliant" stackId="a" fill="#22c55e" name="Compliant" />
+                  <Bar dataKey="Partial" stackId="a" fill="#f59e0b" name="Partial" />
+                  <Bar dataKey="Needs Attention" stackId="a" fill="#ef4444" name="Needs Attention" />
+                  <Bar dataKey="Not Assessed" stackId="a" fill="#6b7280" name="Not Assessed" />
                 </BarChart>
               </ResponsiveContainer>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 3 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight="bold">
+                    {ccStatusDistribution.reduce((sum, cc) => sum + cc.total, 0)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Systems
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                    {ccStatusDistribution.reduce((sum, cc) => sum + cc.Compliant, 0)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Compliant
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Compliance by Framework (Horizontal Bar Chart) */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Compliance by Framework
+              </Typography>
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={frameworkComplianceData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="name" width={150} />
+                  <RechartsTooltip
+                    content={({ payload }) => {
+                      if (payload && payload.length > 0) {
+                        const data = payload[0].payload;
+                        return (
+                          <Paper sx={{ p: 1.5 }}>
+                            <Typography variant="body2" fontWeight="bold">
+                              {data.fullName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Across: {data.ccName}
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              Avg Compliance: {data.score}%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {data.productCount} products, {data.systemCount} systems
+                            </Typography>
+                          </Paper>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="score"
+                    name="Compliance %"
+                    fill="#8b5cf6"
+                    label={({ x, y, width, value }) => (
+                      <text
+                        x={x + width + 5}
+                        y={y + 12}
+                        fill="#666"
+                        fontSize={11}
+                      >
+                        {value}%
+                      </text>
+                    )}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Organizational Hierarchy Drill-Down Table */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6">
+                    Organizational Compliance Hierarchy
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Click to expand and drill down from Capability Centre → Framework → Product → System
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Chip icon={<CCIcon />} label="Capability Centre" size="small" sx={{ bgcolor: '#6366f120' }} />
+                  <Chip icon={<FrameworkIcon />} label="Framework" size="small" sx={{ bgcolor: '#8b5cf620' }} />
+                  <Chip icon={<ProductIcon />} label="Product" size="small" sx={{ bgcolor: '#0ea5e920' }} />
+                  <Chip icon={<SystemIcon />} label="System" size="small" sx={{ bgcolor: '#14b8a620' }} />
+                </Box>
+              </Box>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', width: 120 }}>Score</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', width: 140 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', width: 140 }}>Details</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredHierarchy.map((cc) => (
+                      <HierarchyRow
+                        key={cc.id}
+                        level="cc"
+                        data={cc}
+                        depth={0}
+                        onNavigate={navigate}
+                      >
+                        {cc.frameworks.map((framework) => (
+                          <HierarchyRow
+                            key={framework.id}
+                            level="framework"
+                            data={framework}
+                            depth={1}
+                            onNavigate={navigate}
+                          >
+                            {framework.products.map((product) => (
+                              <HierarchyRow
+                                key={product.id}
+                                level="product"
+                                data={product}
+                                depth={2}
+                                onNavigate={navigate}
+                              >
+                                {product.systems.map((system) => (
+                                  <HierarchyRow
+                                    key={system.id}
+                                    level="system"
+                                    data={system}
+                                    depth={3}
+                                    onNavigate={navigate}
+                                    productId={product.id}
+                                  />
+                                ))}
+                              </HierarchyRow>
+                            ))}
+                          </HierarchyRow>
+                        ))}
+                      </HierarchyRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {filteredHierarchy.length === 0 && (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">
+                    No organizational data available. Create Capability Centres and Frameworks to see the hierarchy.
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>

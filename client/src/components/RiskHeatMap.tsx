@@ -4,6 +4,11 @@
  * Interactive heat map visualization showing compliance and risk levels
  * across CSF functions, categories, and systems. Supports drill-down,
  * tooltips, and clickable cells for navigation.
+ *
+ * Enhanced with Security Operations Dark aesthetic:
+ * - Gradient cells with glow effects
+ * - Refined CSF function colors
+ * - Improved visual hierarchy
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -24,6 +29,10 @@ import {
   ToggleButtonGroup,
   SelectChangeEvent,
   Skeleton,
+  Collapse,
+  Alert,
+  AlertTitle,
+  Button,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -31,7 +40,11 @@ import {
   ZoomIn as ZoomInIcon,
   ZoomOut as ZoomOutIcon,
   Info as InfoIcon,
+  Lightbulb as LightbulbIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
+import { CSF_COLORS } from '../contexts/ThemeContext';
 import type { ComplianceStatus, RiskLevel, FunctionCompliance } from '../types/api.types';
 
 // Types for the heat map
@@ -63,50 +76,50 @@ interface RiskHeatMapProps {
   systems?: { id: string; name: string }[];
   selectedSystemId?: string;
   onSystemChange?: (systemId: string) => void;
+  showOnboarding?: boolean;
+  onDismissOnboarding?: () => void;
 }
 
-// Color scales for different metrics
-const getComplianceColor = (score: number, isDark: boolean): string => {
-  const alpha = isDark ? 0.85 : 1;
-  if (score >= 80) return `rgba(34, 197, 94, ${alpha})`; // green-500
-  if (score >= 60) return `rgba(132, 204, 22, ${alpha})`; // lime-500
-  if (score >= 40) return `rgba(250, 204, 21, ${alpha})`; // yellow-400
-  if (score >= 20) return `rgba(249, 115, 22, ${alpha})`; // orange-500
-  return `rgba(239, 68, 68, ${alpha})`; // red-500
+// Enhanced color functions with gradients
+const getComplianceGradient = (score: number): string => {
+  if (score >= 80) return 'linear-gradient(135deg, #3fb950 0%, #238636 100%)';
+  if (score >= 60) return 'linear-gradient(135deg, #84cc16 0%, #65a30d 100%)';
+  if (score >= 40) return 'linear-gradient(135deg, #d29922 0%, #9e6a03 100%)';
+  if (score >= 20) return 'linear-gradient(135deg, #f0883e 0%, #d18616 100%)';
+  return 'linear-gradient(135deg, #f85149 0%, #da3633 100%)';
 };
 
-const getRiskColor = (riskLevel: RiskLevel | undefined, isDark: boolean): string => {
-  const alpha = isDark ? 0.85 : 1;
+const getComplianceColor = (score: number): string => {
+  if (score >= 80) return '#3fb950';
+  if (score >= 60) return '#84cc16';
+  if (score >= 40) return '#d29922';
+  if (score >= 20) return '#f0883e';
+  return '#f85149';
+};
+
+const getRiskColor = (riskLevel: RiskLevel | undefined): string => {
   switch (riskLevel) {
     case 'Critical':
-      return `rgba(127, 29, 29, ${alpha})`; // red-900
+      return '#7f1d1d';
     case 'High':
-      return `rgba(239, 68, 68, ${alpha})`; // red-500
+      return '#f85149';
     case 'Medium':
-      return `rgba(249, 115, 22, ${alpha})`; // orange-500
+      return '#f0883e';
     case 'Low':
-      return `rgba(34, 197, 94, ${alpha})`; // green-500
+      return '#3fb950';
     default:
-      return `rgba(156, 163, 175, ${alpha})`; // gray-400
+      return '#484f58';
   }
 };
 
-const getTextColor = (backgroundColor: string): string => {
-  // Simple luminance check for contrast
-  const rgb = backgroundColor.match(/\d+/g);
-  if (!rgb || rgb.length < 3) return '#000';
-  const luminance = (0.299 * parseInt(rgb[0]) + 0.587 * parseInt(rgb[1]) + 0.114 * parseInt(rgb[2])) / 255;
-  return luminance > 0.5 ? '#000' : '#fff';
-};
-
-// CSF Function order and colors
+// Updated CSF Function colors from ThemeContext
 const CSF_FUNCTIONS = [
-  { code: 'GV', name: 'Govern', color: '#6366f1' },
-  { code: 'ID', name: 'Identify', color: '#3b82f6' },
-  { code: 'PR', name: 'Protect', color: '#22c55e' },
-  { code: 'DE', name: 'Detect', color: '#f59e0b' },
-  { code: 'RS', name: 'Respond', color: '#ef4444' },
-  { code: 'RC', name: 'Recover', color: '#8b5cf6' },
+  { code: 'GV', name: 'Govern', color: CSF_COLORS.GV },
+  { code: 'ID', name: 'Identify', color: CSF_COLORS.ID },
+  { code: 'PR', name: 'Protect', color: CSF_COLORS.PR },
+  { code: 'DE', name: 'Detect', color: CSF_COLORS.DE },
+  { code: 'RS', name: 'Respond', color: CSF_COLORS.RS },
+  { code: 'RC', name: 'Recover', color: CSF_COLORS.RC },
 ];
 
 type ViewMode = 'compliance' | 'risk' | 'coverage';
@@ -119,13 +132,15 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
   systems,
   selectedSystemId,
   onSystemChange,
+  showOnboarding = false,
+  onDismissOnboarding,
 }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   const [viewMode, setViewMode] = useState<ViewMode>('compliance');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+  const [legendExpanded, setLegendExpanded] = useState(false);
 
   // Transform function compliance data into heat map rows
   const heatMapData = useMemo((): HeatMapRow[] => {
@@ -164,15 +179,49 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
 
   // Calculate overall metrics
   const overallMetrics = useMemo(() => {
-    if (!sortedData.length) return { avgScore: 0, totalControls: 0, assessedControls: 0 };
+    if (!sortedData.length) return { avgScore: 0, totalControls: 0, assessedControls: 0, implementedControls: 0 };
 
     const allCells = sortedData.flatMap((row) => row.cells);
-    const totalControls = allCells.reduce((sum, cell) => sum + cell.total, 0);
-    const assessedControls = allCells.reduce((sum, cell) => sum + cell.assessed, 0);
-    const implementedControls = allCells.reduce((sum, cell) => sum + cell.implemented, 0);
-    const avgScore = totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0;
 
-    return { avgScore, totalControls, assessedControls };
+    // If we have category-level cells, use them for detailed metrics
+    if (allCells.length > 0) {
+      const totalControls = allCells.reduce((sum, cell) => sum + cell.total, 0);
+      const assessedControls = allCells.reduce((sum, cell) => sum + cell.assessed, 0);
+      const implementedControls = allCells.reduce((sum, cell) => sum + cell.implemented, 0);
+      const avgScore = totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0;
+      return { avgScore, totalControls, assessedControls, implementedControls };
+    }
+
+    // Fallback: Calculate from function-level data when categories are empty
+    // This happens with scoped/rollup data that only has function summaries
+    if (data && data.length > 0) {
+      const totalControls = data.reduce((sum, fn) => sum + (fn.totalControls || 0), 0);
+      const assessedControls = data.reduce((sum, fn) => sum + (fn.assessedControls || 0), 0);
+      const implementedControls = data.reduce((sum, fn) => sum + (fn.implementedControls || 0), 0);
+      const avgScore = totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0;
+      return { avgScore, totalControls, assessedControls, implementedControls };
+    }
+
+    return { avgScore: 0, totalControls: 0, assessedControls: 0, implementedControls: 0 };
+  }, [sortedData, data]);
+
+  // Status distribution for legend
+  const statusDistribution = useMemo(() => {
+    const distribution = {
+      high: 0, // 80-100%
+      medium: 0, // 40-80%
+      low: 0, // 0-40%
+    };
+
+    sortedData.forEach((row) => {
+      row.cells.forEach((cell) => {
+        if (cell.score >= 80) distribution.high++;
+        else if (cell.score >= 40) distribution.medium++;
+        else distribution.low++;
+      });
+    });
+
+    return distribution;
   }, [sortedData]);
 
   const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: ViewMode | null) => {
@@ -197,21 +246,38 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
     }
   };
 
+  const getCellBackground = useCallback(
+    (cell: HeatMapCell): string => {
+      switch (viewMode) {
+        case 'compliance':
+          return getComplianceGradient(cell.score);
+        case 'risk':
+          return getRiskColor(cell.riskLevel);
+        case 'coverage':
+          const coverage = cell.total > 0 ? (cell.assessed / cell.total) * 100 : 0;
+          return getComplianceGradient(coverage);
+        default:
+          return getComplianceGradient(cell.score);
+      }
+    },
+    [viewMode]
+  );
+
   const getCellColor = useCallback(
     (cell: HeatMapCell): string => {
       switch (viewMode) {
         case 'compliance':
-          return getComplianceColor(cell.score, isDark);
+          return getComplianceColor(cell.score);
         case 'risk':
-          return getRiskColor(cell.riskLevel, isDark);
+          return getRiskColor(cell.riskLevel);
         case 'coverage':
           const coverage = cell.total > 0 ? (cell.assessed / cell.total) * 100 : 0;
-          return getComplianceColor(coverage, isDark);
+          return getComplianceColor(coverage);
         default:
-          return getComplianceColor(cell.score, isDark);
+          return getComplianceColor(cell.score);
       }
     },
-    [viewMode, isDark]
+    [viewMode]
   );
 
   const getCellValue = useCallback(
@@ -244,9 +310,9 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
           <Box sx={{ mt: 2 }}>
             {[1, 2, 3, 4, 5, 6].map((row) => (
               <Box key={row} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <Skeleton variant="rectangular" width={100} height={60} />
+                <Skeleton variant="rectangular" width={100} height={70} sx={{ borderRadius: 2 }} />
                 {[1, 2, 3, 4, 5].map((cell) => (
-                  <Skeleton key={cell} variant="rectangular" width={80} height={60} />
+                  <Skeleton key={cell} variant="rectangular" width={80} height={70} sx={{ borderRadius: 2 }} />
                 ))}
               </Box>
             ))}
@@ -257,8 +323,39 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
   }
 
   return (
-    <Card>
+    <Card
+      sx={{
+        border: `1px solid ${theme.palette.divider}`,
+        overflow: 'visible',
+      }}
+    >
       <CardContent>
+        {/* Onboarding Banner */}
+        {showOnboarding && (
+          <Collapse in={showOnboarding}>
+            <Alert
+              severity="info"
+              icon={<LightbulbIcon />}
+              action={
+                onDismissOnboarding && (
+                  <Button color="inherit" size="small" onClick={onDismissOnboarding}>
+                    Got it
+                  </Button>
+                )
+              }
+              sx={{
+                mb: 3,
+                bgcolor: alpha(theme.palette.info.main, 0.1),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+              }}
+            >
+              <AlertTitle>Getting Started with the Heat Map</AlertTitle>
+              Click any cell to quickly assess a control. Green = Implemented, Yellow = Partial, Red = Not Implemented.
+              Start with the red cells to address critical gaps!
+            </Alert>
+          </Collapse>
+        )}
+
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -266,8 +363,13 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
               {title}
             </Typography>
             <Chip
-              label={`Overall: ${overallMetrics.avgScore}%`}
-              color={overallMetrics.avgScore >= 80 ? 'success' : overallMetrics.avgScore >= 50 ? 'warning' : 'error'}
+              label={`${overallMetrics.avgScore}%`}
+              sx={{
+                bgcolor: alpha(getComplianceColor(overallMetrics.avgScore), 0.15),
+                color: getComplianceColor(overallMetrics.avgScore),
+                fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace',
+              }}
               size="small"
             />
           </Box>
@@ -316,7 +418,14 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
               <IconButton size="small" onClick={handleZoomOut} disabled={zoomLevel <= 0.5}>
                 <ZoomOutIcon fontSize="small" />
               </IconButton>
-              <Typography variant="caption" sx={{ minWidth: 40, textAlign: 'center' }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  minWidth: 40,
+                  textAlign: 'center',
+                  fontFamily: '"JetBrains Mono", monospace',
+                }}
+              >
                 {Math.round(zoomLevel * 100)}%
               </Typography>
               <IconButton size="small" onClick={handleZoomIn} disabled={zoomLevel >= 2}>
@@ -326,54 +435,68 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
           </Box>
         </Box>
 
-        {/* Legend */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {viewMode === 'compliance' ? 'Compliance:' : 'Coverage:'}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
-              {[
-                { label: '0-20%', color: 'rgba(239, 68, 68, 1)' },
-                { label: '20-40%', color: 'rgba(249, 115, 22, 1)' },
-                { label: '40-60%', color: 'rgba(250, 204, 21, 1)' },
-                { label: '60-80%', color: 'rgba(132, 204, 22, 1)' },
-                { label: '80-100%', color: 'rgba(34, 197, 94, 1)' },
-              ].map((item) => (
-                <Tooltip key={item.label} title={item.label}>
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 16,
-                      bgcolor: item.color,
-                      borderRadius: 0.5,
-                    }}
-                  />
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
+        {/* Collapsible Legend */}
+        <Box sx={{ mb: 2 }}>
+          <Button
+            size="small"
+            onClick={() => setLegendExpanded(!legendExpanded)}
+            endIcon={legendExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            sx={{ color: 'text.secondary', textTransform: 'none' }}
+          >
+            {legendExpanded ? 'Hide Legend' : 'Show Legend'} ({statusDistribution.high} green, {statusDistribution.medium} yellow, {statusDistribution.low} red)
+          </Button>
+          <Collapse in={legendExpanded}>
+            <Box sx={{ display: 'flex', gap: 3, mt: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {viewMode === 'compliance' ? 'Compliance:' : 'Coverage:'}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {[
+                    { label: '0-20%', gradient: 'linear-gradient(135deg, #f85149 0%, #da3633 100%)' },
+                    { label: '20-40%', gradient: 'linear-gradient(135deg, #f0883e 0%, #d18616 100%)' },
+                    { label: '40-60%', gradient: 'linear-gradient(135deg, #d29922 0%, #9e6a03 100%)' },
+                    { label: '60-80%', gradient: 'linear-gradient(135deg, #84cc16 0%, #65a30d 100%)' },
+                    { label: '80-100%', gradient: 'linear-gradient(135deg, #3fb950 0%, #238636 100%)' },
+                  ].map((item) => (
+                    <Tooltip key={item.label} title={item.label}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 18,
+                          background: item.gradient,
+                          borderRadius: 1,
+                          boxShadow: `0 2px 4px ${alpha('#000', 0.2)}`,
+                        }}
+                      />
+                    </Tooltip>
+                  ))}
+                </Box>
+              </Box>
 
-          {/* CSF Function Legend */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Functions:
-            </Typography>
-            {CSF_FUNCTIONS.map((func) => (
-              <Tooltip key={func.code} title={func.name}>
-                <Chip
-                  label={func.code}
-                  size="small"
-                  sx={{
-                    bgcolor: func.color,
-                    color: 'white',
-                    fontSize: '0.65rem',
-                    height: 20,
-                  }}
-                />
-              </Tooltip>
-            ))}
-          </Box>
+              {/* CSF Function Legend */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Functions:
+                </Typography>
+                {CSF_FUNCTIONS.map((func) => (
+                  <Tooltip key={func.code} title={func.name}>
+                    <Chip
+                      label={func.code}
+                      size="small"
+                      sx={{
+                        bgcolor: func.color,
+                        color: 'white',
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        height: 22,
+                      }}
+                    />
+                  </Tooltip>
+                ))}
+              </Box>
+            </Box>
+          </Collapse>
         </Box>
 
         {/* Heat Map Grid */}
@@ -386,44 +509,58 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
           }}
         >
           <Box sx={{ minWidth: 600 }}>
-            {sortedData.map((row) => (
+            {sortedData.map((row, rowIndex) => (
               <Box
                 key={row.id}
+                className="animate-fade-in-up"
                 sx={{
                   display: 'flex',
-                  gap: 0.5,
-                  mb: 0.5,
+                  gap: 0.75,
+                  mb: 0.75,
+                  animationDelay: `${rowIndex * 50}ms`,
                 }}
               >
                 {/* Function Label */}
                 <Paper
                   sx={{
-                    width: 120,
-                    minWidth: 120,
-                    p: 1,
+                    width: 130,
+                    minWidth: 130,
+                    p: 1.5,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    bgcolor: alpha(getFunctionColor(row.code), 0.15),
+                    background: `linear-gradient(135deg, ${alpha(getFunctionColor(row.code), 0.15)} 0%, ${alpha(getFunctionColor(row.code), 0.05)} 100%)`,
                     borderLeft: `4px solid ${getFunctionColor(row.code)}`,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${alpha(getFunctionColor(row.code), 0.2)} 0%, ${alpha(getFunctionColor(row.code), 0.1)} 100%)`,
+                    },
                   }}
                 >
-                  <Typography variant="subtitle2" fontWeight="bold">
+                  <Typography variant="subtitle2" fontWeight="bold" color={getFunctionColor(row.code)}>
                     {row.code}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {row.name}
                   </Typography>
-                  <Typography variant="caption" fontWeight="bold">
+                  <Typography
+                    variant="caption"
+                    fontWeight="bold"
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      color: getComplianceColor(row.averageScore),
+                    }}
+                  >
                     {row.averageScore}%
                   </Typography>
                 </Paper>
 
                 {/* Category Cells */}
-                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                  {row.cells.map((cell) => {
-                    const bgColor = getCellColor(cell);
-                    const textColor = getTextColor(bgColor);
+                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                  {row.cells.map((cell, cellIndex) => {
+                    const cellBackground = getCellBackground(cell);
+                    const cellColor = getCellColor(cell);
                     const isHovered = hoveredCell === cell.id;
 
                     return (
@@ -443,6 +580,11 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
                             <Typography variant="body2">
                               Assessed: {cell.assessed}/{cell.total}
                             </Typography>
+                            {onCellClick && (
+                              <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.8 }}>
+                                Click to assess
+                              </Typography>
+                            )}
                           </Box>
                         }
                         arrow
@@ -453,31 +595,46 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
                           onMouseEnter={() => setHoveredCell(cell.id)}
                           onMouseLeave={() => setHoveredCell(null)}
                           sx={{
-                            width: 80,
-                            height: 60,
+                            width: 85,
+                            height: 70,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            bgcolor: bgColor,
-                            color: textColor,
+                            background: cellBackground,
+                            color: '#ffffff',
                             cursor: onCellClick ? 'pointer' : 'default',
+                            borderRadius: 2,
                             transition: 'all 0.2s ease',
-                            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-                            boxShadow: isHovered ? 4 : 1,
-                            border: isHovered ? `2px solid ${theme.palette.primary.main}` : 'none',
+                            transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
+                            boxShadow: isHovered
+                              ? `0 8px 24px ${alpha(cellColor, 0.4)}`
+                              : `0 2px 8px ${alpha(cellColor, 0.2)}`,
+                            border: `1px solid ${alpha(cellColor, isHovered ? 0.6 : 0.3)}`,
+                            animationDelay: `${(rowIndex * 6 + cellIndex) * 20}ms`,
                             '&:hover': {
-                              boxShadow: 4,
+                              boxShadow: `0 8px 24px ${alpha(cellColor, 0.4)}`,
                             },
                           }}
                         >
-                          <Typography variant="caption" fontWeight="bold">
+                          <Typography
+                            variant="caption"
+                            fontWeight="bold"
+                            sx={{ opacity: 0.9, fontSize: '0.7rem' }}
+                          >
                             {cell.code}
                           </Typography>
-                          <Typography variant="body2" fontWeight="bold">
+                          <Typography
+                            variant="body1"
+                            fontWeight="bold"
+                            sx={{ fontFamily: '"JetBrains Mono", monospace' }}
+                          >
                             {getCellValue(cell)}
                           </Typography>
-                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ opacity: 0.8, fontSize: '0.65rem' }}
+                          >
                             {cell.assessed}/{cell.total}
                           </Typography>
                         </Paper>
@@ -501,28 +658,59 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
             borderTop: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 3 }}>
+          <Box sx={{ display: 'flex', gap: 4 }}>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
                 Total Controls
               </Typography>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                sx={{ fontFamily: '"JetBrains Mono", monospace' }}
+              >
                 {overallMetrics.totalControls}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
                 Assessed
               </Typography>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                sx={{ fontFamily: '"JetBrains Mono", monospace', color: theme.palette.info.main }}
+              >
                 {overallMetrics.assessedControls}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                Implemented
+              </Typography>
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                sx={{ fontFamily: '"JetBrains Mono", monospace', color: theme.palette.success.main }}
+              >
+                {overallMetrics.implementedControls}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
                 Coverage
               </Typography>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                sx={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  color: getComplianceColor(
+                    overallMetrics.totalControls > 0
+                      ? Math.round((overallMetrics.assessedControls / overallMetrics.totalControls) * 100)
+                      : 0
+                  ),
+                }}
+              >
                 {overallMetrics.totalControls > 0
                   ? Math.round((overallMetrics.assessedControls / overallMetrics.totalControls) * 100)
                   : 0}
@@ -532,7 +720,7 @@ export const RiskHeatMap: React.FC<RiskHeatMapProps> = ({
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <InfoIcon fontSize="small" color="action" />
+            <InfoIcon fontSize="small" sx={{ color: 'text.secondary' }} />
             <Typography variant="caption" color="text.secondary">
               Click on a cell to view detailed assessments
             </Typography>

@@ -1,6 +1,6 @@
 {
-  "short_name": "NIST Mapper",
-  "name": "NIST Control Mapper",
+  "short_name": "Posture",
+  "name": "Posture",
   "icons": [
     {
       "src": "favicon.ico",

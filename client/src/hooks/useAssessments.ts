@@ -359,6 +359,8 @@ export const useUpdateAssessment = (
       if (updates.implementationNotes !== undefined) serverUpdates.details = updates.implementationNotes;
       if (updates.evidence !== undefined) serverUpdates.evidence = updates.evidence;
       if (updates.remediationPlan !== undefined) serverUpdates.remediationPlan = updates.remediationPlan;
+      if (updates.riskLevel !== undefined) serverUpdates.riskLevel = updates.riskLevel;
+      if (updates.targetDate !== undefined) serverUpdates.targetDate = updates.targetDate;
 
       const response = await api.put<any>(`/assessments/${id}`, serverUpdates);
       console.log('[useUpdateAssessment] Response:', response.data);

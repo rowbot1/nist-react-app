@@ -33,6 +33,7 @@ export const ProductListExample: React.FC = () => {
       description: 'Example product',
       type: 'WEB_APPLICATION',
       criticality: 'MEDIUM',
+      frameworkId: 'replace-with-actual-framework-id', // Example - replace with real framework ID
     };
 
     try {

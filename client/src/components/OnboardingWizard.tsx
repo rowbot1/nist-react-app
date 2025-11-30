@@ -34,6 +34,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useCreateProduct } from '../hooks/useProducts';
 import { useCreateSystem } from '../hooks/useSystems';
+import { useOrganizationalHierarchy } from '../hooks/useCapabilityCentres';
 
 interface OnboardingWizardProps {
   open: boolean;
@@ -42,7 +43,7 @@ interface OnboardingWizardProps {
 }
 
 const STEPS = [
-  { label: 'Welcome', description: 'Introduction to NIST Mapper' },
+  { label: 'Welcome', description: 'Introduction to Posture' },
   { label: 'Create Product', description: 'Set up your first product' },
   { label: 'Add System', description: 'Define a system to assess' },
   { label: 'Next Steps', description: "What's next" },
@@ -59,15 +60,39 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 }) => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
+  // Fetch organizational hierarchy to get frameworks
+  const { data: hierarchy = [] } = useOrganizationalHierarchy();
+
+  // Get first available framework (prefer Unassigned)
+  const getDefaultFrameworkId = (): string => {
+    for (const cc of hierarchy) {
+      // First look for an Unassigned framework
+      const unassigned = cc.frameworks.find(f => f.isUnassigned);
+      if (unassigned) return unassigned.id;
+      // Otherwise use first framework
+      if (cc.frameworks.length > 0) return cc.frameworks[0].id;
+    }
+    return '';
+  };
+
   const [productData, setProductData] = useState<{
     name: string;
     description: string;
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    frameworkId: string;
   }>({
     name: '',
     description: '',
     riskLevel: 'MEDIUM',
+    frameworkId: '',
   });
+
+  // Update frameworkId when hierarchy loads
+  useEffect(() => {
+    if (hierarchy.length > 0 && !productData.frameworkId) {
+      setProductData(prev => ({ ...prev, frameworkId: getDefaultFrameworkId() }));
+    }
+  }, [hierarchy]);
   const [systemData, setSystemData] = useState({
     name: '',
     description: '',
@@ -113,7 +138,16 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         setError('Product name is required');
         return;
       }
-      createProductMutation.mutate(productData);
+      if (!productData.frameworkId) {
+        setError('No framework available. Please create a capability centre first.');
+        return;
+      }
+      createProductMutation.mutate({
+        name: productData.name,
+        description: productData.description,
+        criticality: productData.riskLevel,
+        frameworkId: productData.frameworkId,
+      });
     } else if (activeStep === 2) {
       // Create system
       if (!systemData.name.trim()) {
@@ -160,10 +194,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <Box sx={{ textAlign: 'center', py: 2 }}>
             <SecurityIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
             <Typography variant="h5" gutterBottom>
-              Welcome to NIST Control Mapper
+              Welcome to Posture
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Your comprehensive solution for NIST 800-53 compliance management.
+              Your comprehensive security compliance platform.
               Let's get you started with a quick setup.
             </Typography>
 

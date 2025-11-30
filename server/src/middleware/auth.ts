@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import { prisma } from '../prisma';
+import { config } from '../config';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -29,7 +27,7 @@ export const authMiddleware = async (
       });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, config.jwtSecret) as any;
     
     // Verify user still exists
     const user = await prisma.user.findUnique({

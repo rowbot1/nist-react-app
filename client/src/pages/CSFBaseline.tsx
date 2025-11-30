@@ -5,7 +5,7 @@
  * Features include templates, hierarchical control browser, filtering, and detailed analytics.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -54,9 +54,12 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from 'recharts';
-import { useProducts } from '../hooks/useProducts';
-import { useCSFFunctions, useCSFCategories, useCSFSubcategories } from '../hooks/useCSF';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { useProducts, productKeys } from '../hooks/useProducts';
+import { useCSFFunctions, useCSFCategories, useCSFSubcategories, sortByCSFOrder, CSF_FUNCTION_ORDER } from '../hooks/useCSF';
 import { useProductBaseline, useUpdateBaseline } from '../hooks/useBaseline';
+import api from '../services/api';
 
 // Template definitions
 interface BaselineTemplate {
@@ -124,8 +127,13 @@ const FUNCTION_COLORS: Record<string, string> = {
 };
 
 const CSFBaseline: React.FC = () => {
+  // Get product ID from URL params (when navigating from product details)
+  const { id: productIdFromUrl } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   // State management
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [selectedProductId, setSelectedProductId] = useState<string>(productIdFromUrl || '');
   const [expandedFunctions, setExpandedFunctions] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
@@ -156,6 +164,13 @@ const CSFBaseline: React.FC = () => {
   // Control selections state (local until saved)
   const [selections, setSelections] = useState<Map<string, ControlSelection>>(new Map());
 
+  // Sync selectedProductId when URL param changes (e.g., navigating from different product)
+  useEffect(() => {
+    if (productIdFromUrl && productIdFromUrl !== selectedProductId) {
+      setSelectedProductId(productIdFromUrl);
+    }
+  }, [productIdFromUrl, selectedProductId]);
+
   // Initialize selections from baseline when loaded
   React.useEffect(() => {
     if (baseline && subcategories) {
@@ -173,11 +188,11 @@ const CSFBaseline: React.FC = () => {
     }
   }, [baseline, subcategories]);
 
-  // Build hierarchical structure
+  // Build hierarchical structure with NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC
   const hierarchy = useMemo(() => {
     if (!functions || !categories || !subcategories) return [];
 
-    return functions.map((func) => {
+    const hierarchyData = functions.map((func) => {
       const funcCategories = categories
         .filter((cat) => cat.functionId === func.id)
         .map((cat) => {
@@ -188,6 +203,9 @@ const CSFBaseline: React.FC = () => {
         });
       return { ...func, categories: funcCategories };
     });
+
+    // Sort functions in official NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC
+    return sortByCSFOrder(hierarchyData);
   }, [functions, categories, subcategories]);
 
   // Apply filters
@@ -284,13 +302,15 @@ const CSFBaseline: React.FC = () => {
     };
   }, [selections, functions, categories, subcategories]);
 
-  // Chart data
+  // Chart data - sorted in NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC
   const chartData = useMemo(() => {
-    return Object.entries(statistics.byFunction).map(([code, count]) => ({
-      name: code,
-      value: count,
-      color: FUNCTION_COLORS[code] || '#999999',
-    }));
+    return CSF_FUNCTION_ORDER
+      .filter((code) => code in statistics.byFunction)
+      .map((code) => ({
+        name: code,
+        value: statistics.byFunction[code] || 0,
+        color: FUNCTION_COLORS[code] || '#999999',
+      }));
   }, [statistics.byFunction]);
 
   // Handlers
@@ -395,30 +415,149 @@ const CSFBaseline: React.FC = () => {
     });
   };
 
-  const handleApplyTemplate = (template: BaselineTemplate) => {
-    // In production, this would apply the template's control selection
-    // For now, we'll simulate by selecting a percentage based on count
-    const allSubcategoryIds = Array.from(selections.keys());
-    const percentage = template.controlCount / 185;
-    const countToSelect = Math.floor(allSubcategoryIds.length * percentage);
+  // Bulk select all controls in a function
+  const handleSelectFunction = (functionId: string, select: boolean) => {
+    if (!categories || !subcategories) return;
 
     setSelections((prev) => {
       const next = new Map(prev);
-      // First deselect all
-      next.forEach((value, key) => {
-        next.set(key, { ...value, applicable: false, categoryLevel: null });
-      });
-      // Then select the first N
-      allSubcategoryIds.slice(0, countToSelect).forEach((id) => {
-        const current = next.get(id);
-        if (current) {
-          next.set(id, { ...current, applicable: true, categoryLevel: 'SHOULD_HAVE' });
-        }
+      const funcCategories = categories.filter((cat) => cat.functionId === functionId);
+      const funcSubcategoryIds = subcategories
+        .filter((sub) => funcCategories.some((cat) => cat.id === sub.categoryId))
+        .map((sub) => sub.id);
+
+      funcSubcategoryIds.forEach((id) => {
+        const current = next.get(id) || {
+          subcategoryId: id,
+          applicable: false,
+          categoryLevel: null,
+          justification: '',
+        };
+        next.set(id, {
+          ...current,
+          applicable: select,
+          categoryLevel: select ? 'SHOULD_HAVE' : null,
+        });
       });
       return next;
     });
+  };
+
+  // Bulk select all controls in a category
+  const handleSelectCategory = (categoryId: string, select: boolean) => {
+    if (!subcategories) return;
+
+    setSelections((prev) => {
+      const next = new Map(prev);
+      const catSubcategoryIds = subcategories
+        .filter((sub) => sub.categoryId === categoryId)
+        .map((sub) => sub.id);
+
+      catSubcategoryIds.forEach((id) => {
+        const current = next.get(id) || {
+          subcategoryId: id,
+          applicable: false,
+          categoryLevel: null,
+          justification: '',
+        };
+        next.set(id, {
+          ...current,
+          applicable: select,
+          categoryLevel: select ? 'SHOULD_HAVE' : null,
+        });
+      });
+      return next;
+    });
+  };
+
+  // Check if all controls in a function are selected
+  const isFunctionFullySelected = (functionId: string): boolean => {
+    if (!categories || !subcategories) return false;
+    const funcCategories = categories.filter((cat) => cat.functionId === functionId);
+    const funcSubcategories = subcategories.filter((sub) =>
+      funcCategories.some((cat) => cat.id === sub.categoryId)
+    );
+    return funcSubcategories.every((sub) => selections.get(sub.id)?.applicable);
+  };
+
+  // Check if all controls in a category are selected
+  const isCategoryFullySelected = (categoryId: string): boolean => {
+    if (!subcategories) return false;
+    const catSubcategories = subcategories.filter((sub) => sub.categoryId === categoryId);
+    return catSubcategories.every((sub) => selections.get(sub.id)?.applicable);
+  };
+
+  // Check if some controls in a function are selected
+  const isFunctionPartiallySelected = (functionId: string): boolean => {
+    if (!categories || !subcategories) return false;
+    const funcCategories = categories.filter((cat) => cat.functionId === functionId);
+    const funcSubcategories = subcategories.filter((sub) =>
+      funcCategories.some((cat) => cat.id === sub.categoryId)
+    );
+    const selectedCount = funcSubcategories.filter((sub) => selections.get(sub.id)?.applicable).length;
+    return selectedCount > 0 && selectedCount < funcSubcategories.length;
+  };
+
+  // Check if some controls in a category are selected
+  const isCategoryPartiallySelected = (categoryId: string): boolean => {
+    if (!subcategories) return false;
+    const catSubcategories = subcategories.filter((sub) => sub.categoryId === categoryId);
+    const selectedCount = catSubcategories.filter((sub) => selections.get(sub.id)?.applicable).length;
+    return selectedCount > 0 && selectedCount < catSubcategories.length;
+  };
+
+  const handleApplyTemplate = async (template: BaselineTemplate) => {
+    if (!selectedProductId) return;
+
+    // Map template names to server template IDs
+    const templateIdMap: Record<string, string> = {
+      'Minimum Viable Security': 'minimal-startup',
+      'Standard Enterprise': 'standard-enterprise',
+      'High Security': 'standard-enterprise', // Use standard for now
+      'Full CSF Coverage': 'comprehensive',
+    };
+
+    const templateId = templateIdMap[template.name] || 'minimal-startup';
 
     setTemplateDialogOpen(false);
+
+    try {
+      // Use the apply-template API endpoint which saves AND creates assessments
+      const response = await api.post(
+        `/baselines/product/${selectedProductId}/apply-template`,
+        { templateId }
+      );
+
+      // Update local selections to match what was saved
+      if (response.data?.data?.controlIds) {
+        const appliedControlIds = new Set(response.data.data.controlIds);
+        setSelections((prev) => {
+          const next = new Map(prev);
+          next.forEach((value, key) => {
+            const isApplied = appliedControlIds.has(key);
+            next.set(key, {
+              ...value,
+              applicable: isApplied,
+              categoryLevel: isApplied ? 'SHOULD_HAVE' : null,
+            });
+          });
+          return next;
+        });
+      }
+
+      // Invalidate all product caches so AssessmentWorkspace gets fresh data
+      queryClient.invalidateQueries({ queryKey: productKeys.all });
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(selectedProductId) });
+
+      setSaveSuccess(true);
+
+      // Navigate to the product page showing all systems
+      setTimeout(() => {
+        navigate(`/products/${selectedProductId}`);
+      }, 1000); // Brief delay to show success message
+    } catch (error) {
+      console.error('Failed to apply template:', error);
+    }
   };
 
   const handleSave = async () => {
@@ -692,6 +831,18 @@ const CSFBaseline: React.FC = () => {
                                 <CollapseIcon />
                               )}
                             </IconButton>
+                            {/* Bulk select checkbox for function */}
+                            <Checkbox
+                              checked={isFunctionFullySelected(func.id)}
+                              indeterminate={isFunctionPartiallySelected(func.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectFunction(func.id, !isFunctionFullySelected(func.id));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              sx={{ mr: 1 }}
+                              title={isFunctionFullySelected(func.id) ? 'Deselect all controls in this function' : 'Select all controls in this function'}
+                            />
                             <Chip
                               label={func.code}
                               sx={{
@@ -741,6 +892,19 @@ const CSFBaseline: React.FC = () => {
                                           <CollapseIcon />
                                         )}
                                       </IconButton>
+                                      {/* Bulk select checkbox for category */}
+                                      <Checkbox
+                                        checked={isCategoryFullySelected(cat.id)}
+                                        indeterminate={isCategoryPartiallySelected(cat.id)}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectCategory(cat.id, !isCategoryFullySelected(cat.id));
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        size="small"
+                                        sx={{ mr: 1 }}
+                                        title={isCategoryFullySelected(cat.id) ? 'Deselect all controls in this category' : 'Select all controls in this category'}
+                                      />
                                       <Typography
                                         variant="subtitle1"
                                         fontWeight="medium"
@@ -868,7 +1032,7 @@ const CSFBaseline: React.FC = () => {
                                                         </Typography>
                                                         <List dense>
                                                           {sub.implementationExamples.map(
-                                                            (example, idx) => (
+                                                            (example: any, idx: number) => (
                                                               <ListItem key={idx} sx={{ pl: 0 }}>
                                                                 <ListItemIcon sx={{ minWidth: 32 }}>
                                                                   <CheckCircleIcon
@@ -877,7 +1041,7 @@ const CSFBaseline: React.FC = () => {
                                                                   />
                                                                 </ListItemIcon>
                                                                 <ListItemText
-                                                                  primary={example}
+                                                                  primary={typeof example === 'string' ? example : (example.text || example.title || String(example))}
                                                                   primaryTypographyProps={{
                                                                     variant: 'body2',
                                                                   }}
@@ -1012,33 +1176,36 @@ const CSFBaseline: React.FC = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <Box sx={{ mt: 2 }}>
-                    {Object.entries(statistics.byFunction).map(([code, count]) => (
-                      <Box
-                        key={code}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 1,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Box
-                            sx={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              bgcolor: FUNCTION_COLORS[code],
-                              mr: 1,
-                            }}
-                          />
-                          <Typography variant="body2">{code}</Typography>
+                    {/* Display functions in NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC */}
+                    {CSF_FUNCTION_ORDER
+                      .filter((code) => code in statistics.byFunction)
+                      .map((code) => (
+                        <Box
+                          key={code}
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 1,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                              sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                bgcolor: FUNCTION_COLORS[code],
+                                mr: 1,
+                              }}
+                            />
+                            <Typography variant="body2">{code}</Typography>
+                          </Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {statistics.byFunction[code] || 0}
+                          </Typography>
                         </Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {count}
-                        </Typography>
-                      </Box>
-                    ))}
+                      ))}
                   </Box>
                 </CardContent>
               </Card>

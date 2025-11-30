@@ -23,6 +23,16 @@ import {
   IconButton,
   InputAdornment,
   SelectChangeEvent,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -32,8 +42,22 @@ import {
   VisibilityOff,
   Save as SaveIcon,
   CheckCircle as CheckCircleIcon,
+  Business as BusinessIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Folder as FolderIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  useCapabilityCentres,
+  useCreateCapabilityCentre,
+  useUpdateCapabilityCentre,
+  useDeleteCapabilityCentre,
+} from '../hooks/useCapabilityCentres';
+import { useFrameworks } from '../hooks';
+import type { CapabilityCentre } from '../types/api.types';
 import axios from 'axios';
 import { format } from 'date-fns';
 
@@ -72,8 +96,28 @@ interface PasswordStrength {
   color: 'error' | 'warning' | 'info' | 'success';
 }
 
+// Colors for capability centres
+const CC_COLORS = [
+  '#1976d2', // Blue
+  '#388e3c', // Green
+  '#f57c00', // Orange
+  '#7b1fa2', // Purple
+  '#d32f2f', // Red
+  '#0097a7', // Cyan
+  '#5d4037', // Brown
+  '#455a64', // Blue Grey
+];
+
+interface CCFormData {
+  name: string;
+  description: string;
+  code: string;
+  color: string;
+}
+
 const Settings: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   // Profile state
@@ -107,6 +151,24 @@ const Settings: React.FC = () => {
   const [preferencesSuccess, setPreferencesSuccess] = useState('');
   const [preferencesError, setPreferencesError] = useState('');
   const [preferencesLoading, setPreferencesLoading] = useState(false);
+
+  // Organization state (Capability Centres & Frameworks)
+  const { data: capabilityCentres = [], isLoading: ccLoading } = useCapabilityCentres();
+  const { data: frameworks = [] } = useFrameworks();
+  const createCC = useCreateCapabilityCentre();
+  const updateCC = useUpdateCapabilityCentre();
+  const deleteCC = useDeleteCapabilityCentre();
+
+  const [ccDialogOpen, setCcDialogOpen] = useState(false);
+  const [editingCC, setEditingCC] = useState<CapabilityCentre | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ccToDelete, setCcToDelete] = useState<CapabilityCentre | null>(null);
+  const [ccFormData, setCcFormData] = useState<CCFormData>({
+    name: '',
+    description: '',
+    code: '',
+    color: CC_COLORS[0],
+  });
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -286,6 +348,73 @@ const Settings: React.FC = () => {
     setDarkMode(newValue);
   };
 
+  // Capability Centre handlers
+  const handleOpenCCDialog = (cc?: CapabilityCentre) => {
+    if (cc) {
+      setEditingCC(cc);
+      setCcFormData({
+        name: cc.name,
+        description: cc.description || '',
+        code: cc.code || '',
+        color: cc.color || CC_COLORS[0],
+      });
+    } else {
+      setEditingCC(null);
+      setCcFormData({
+        name: '',
+        description: '',
+        code: '',
+        color: CC_COLORS[0],
+      });
+    }
+    setCcDialogOpen(true);
+  };
+
+  const handleCloseCCDialog = () => {
+    setCcDialogOpen(false);
+    setEditingCC(null);
+  };
+
+  const handleSaveCC = async () => {
+    if (editingCC) {
+      await updateCC.mutateAsync({
+        id: editingCC.id,
+        data: {
+          name: ccFormData.name,
+          description: ccFormData.description || undefined,
+          code: ccFormData.code || undefined,
+          color: ccFormData.color,
+        },
+      });
+    } else {
+      await createCC.mutateAsync({
+        name: ccFormData.name,
+        description: ccFormData.description || undefined,
+        code: ccFormData.code || undefined,
+        color: ccFormData.color,
+      });
+    }
+    handleCloseCCDialog();
+  };
+
+  const handleDeleteCC = (cc: CapabilityCentre) => {
+    setCcToDelete(cc);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteCC = async () => {
+    if (ccToDelete) {
+      await deleteCC.mutateAsync(ccToDelete.id);
+    }
+    setDeleteDialogOpen(false);
+    setCcToDelete(null);
+  };
+
+  // Get frameworks count for a capability centre
+  const getFrameworksForCC = (ccId: string) => {
+    return frameworks.filter((fw) => fw.capabilityCentreId === ccId);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
@@ -322,6 +451,12 @@ const Settings: React.FC = () => {
               iconPosition="start"
               label="Preferences"
               {...a11yProps(2)}
+            />
+            <Tab
+              icon={<BusinessIcon />}
+              iconPosition="start"
+              label="Organization"
+              {...a11yProps(3)}
             />
           </Tabs>
         </Box>
@@ -799,7 +934,334 @@ const Settings: React.FC = () => {
             </Button>
           </Box>
         </TabPanel>
+
+        {/* Organization Tab */}
+        <TabPanel value={activeTab} index={3}>
+          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            {/* Capability Centres Section */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+                  Capability Centres
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Top-level organizational units that group frameworks
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenCCDialog()}
+              >
+                Add Capability Centre
+              </Button>
+            </Box>
+
+            {ccLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : capabilityCentres.length === 0 ? (
+              <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+                <BusinessIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  No Capability Centres Yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Create your first capability centre to organize your compliance framework
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenCCDialog()}
+                >
+                  Create First Capability Centre
+                </Button>
+              </Paper>
+            ) : (
+              <Paper variant="outlined">
+                <List disablePadding>
+                  {capabilityCentres.map((cc, index) => {
+                    const ccFrameworks = getFrameworksForCC(cc.id);
+                    return (
+                      <React.Fragment key={cc.id}>
+                        {index > 0 && <Divider />}
+                        <ListItem sx={{ py: 2 }}>
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 1,
+                              backgroundColor: cc.color || '#1976d2',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              mr: 2,
+                            }}
+                          >
+                            <BusinessIcon />
+                          </Box>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="subtitle1" fontWeight="medium">
+                                  {cc.name}
+                                </Typography>
+                                {cc.code && (
+                                  <Chip label={cc.code} size="small" variant="outlined" />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 0.5 }}>
+                                {cc.description && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {cc.description}
+                                  </Typography>
+                                )}
+                                <Typography variant="caption" color="text.secondary">
+                                  {ccFrameworks.length} framework{ccFrameworks.length !== 1 ? 's' : ''}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          <ListItemSecondaryAction>
+                            <Tooltip title="Edit">
+                              <IconButton
+                                edge="end"
+                                onClick={() => handleOpenCCDialog(cc)}
+                                sx={{ mr: 1 }}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton
+                                edge="end"
+                                onClick={() => handleDeleteCC(cc)}
+                                color="error"
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      </React.Fragment>
+                    );
+                  })}
+                </List>
+              </Paper>
+            )}
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Frameworks Section */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+                  Frameworks
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Business domain portfolios that organize products
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                startIcon={<FolderIcon />}
+                onClick={() => navigate('/frameworks')}
+              >
+                Manage Frameworks
+              </Button>
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {frameworks.length} framework{frameworks.length !== 1 ? 's' : ''} configured.{' '}
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="primary"
+                  sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  onClick={() => navigate('/frameworks')}
+                >
+                  Go to Frameworks page
+                </Typography>{' '}
+                to create, edit, or delete frameworks.
+              </Typography>
+            </Paper>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Quick Reference */}
+            <Typography variant="h6" gutterBottom>
+              Quick Reference
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              How to add entities in the application
+            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Add Products
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Go to <strong>Products</strong> page → Click <strong>"Create Product"</strong> button
+                  </Typography>
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => navigate('/products')}
+                  >
+                    Go to Products
+                  </Button>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Add Systems
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Open a <strong>Product</strong> → <strong>Systems</strong> tab → Click <strong>"Add System"</strong>
+                  </Typography>
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => navigate('/products')}
+                  >
+                    Go to Products
+                  </Button>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Add Frameworks
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Go to <strong>Frameworks</strong> page → Click <strong>"New Framework"</strong> button
+                  </Typography>
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => navigate('/frameworks')}
+                  >
+                    Go to Frameworks
+                  </Button>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        </TabPanel>
       </Paper>
+
+      {/* Capability Centre Dialog */}
+      <Dialog open={ccDialogOpen} onClose={handleCloseCCDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingCC ? 'Edit Capability Centre' : 'Create Capability Centre'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Name"
+            fullWidth
+            required
+            value={ccFormData.name}
+            onChange={(e) => setCcFormData({ ...ccFormData, name: e.target.value })}
+            placeholder="e.g., Technology, Operations, Security"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Code"
+            fullWidth
+            value={ccFormData.code}
+            onChange={(e) => setCcFormData({ ...ccFormData, code: e.target.value })}
+            placeholder="e.g., TECH, OPS, SEC"
+            helperText="Short identifier (optional)"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            rows={2}
+            value={ccFormData.description}
+            onChange={(e) => setCcFormData({ ...ccFormData, description: e.target.value })}
+            placeholder="Brief description of this capability centre"
+            sx={{ mb: 3 }}
+          />
+          <Typography variant="subtitle2" gutterBottom>
+            Color
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {CC_COLORS.map((color) => (
+              <Box
+                key={color}
+                onClick={() => setCcFormData({ ...ccFormData, color })}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  backgroundColor: color,
+                  cursor: 'pointer',
+                  border: ccFormData.color === color ? 3 : 0,
+                  borderColor: 'white',
+                  boxShadow: ccFormData.color === color ? `0 0 0 2px ${color}` : 'none',
+                }}
+              />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCCDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveCC}
+            disabled={!ccFormData.name.trim() || createCC.isPending || updateCC.isPending}
+          >
+            {createCC.isPending || updateCC.isPending ? (
+              <CircularProgress size={20} />
+            ) : editingCC ? (
+              'Update'
+            ) : (
+              'Create'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Capability Centre?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{ccToDelete?.name}"?
+          </Typography>
+          {ccToDelete && getFrameworksForCC(ccToDelete.id).length > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              This capability centre has {getFrameworksForCC(ccToDelete.id).length} framework(s).
+              Deleting it may affect associated data.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDeleteCC}
+            disabled={deleteCC.isPending}
+          >
+            {deleteCC.isPending ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

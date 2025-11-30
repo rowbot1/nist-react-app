@@ -1,9 +1,9 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Helper function to verify product ownership
 async function verifyProductOwnership(productId: string, userId: string): Promise<boolean> {
@@ -177,7 +177,7 @@ router.get('/compliance/:productId', async (req: AuthenticatedRequest, res) => {
 
     // Calculate metrics for each function and category
     const functionMetrics = Array.from(functionBreakdown.entries()).map(([functionId, data]) => {
-      const categoryMetrics = Array.from(data.categories.entries()).map(([categoryId, catData]) => ({
+      const categoryMetrics = Array.from(data.categories.entries() as IterableIterator<[string, any]>).map(([categoryId, catData]) => ({
         categoryId,
         total: catData.assessments.length,
         compliant: catData.assessments.filter((a: any) => a.status === 'COMPLIANT').length,

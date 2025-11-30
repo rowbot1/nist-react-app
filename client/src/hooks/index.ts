@@ -77,3 +77,60 @@ export {
   useHasBaseline,
   baselineKeys,
 } from './useBaseline';
+
+// Framework hooks
+export {
+  useFrameworks,
+  useFramework,
+  useFrameworkOverview,
+  useCreateFramework,
+  useUpdateFramework,
+  useDeleteFramework,
+  useAddProductToFramework,
+  useRemoveProductFromFramework,
+  frameworkKeys,
+} from './useFrameworks';
+
+// Capability Centre hooks
+export {
+  useCapabilityCentres,
+  useCapabilityCentre,
+  useOrganizationalHierarchy,
+  useCreateCapabilityCentre,
+  useUpdateCapabilityCentre,
+  useDeleteCapabilityCentre,
+  capabilityCentreKeys,
+} from './useCapabilityCentres';
+
+// Risk hooks
+export {
+  useRiskConfig,
+  useUpdateRiskConfig,
+  useRiskScore,
+  useRiskHeatMap,
+  useRiskPriorities,
+  useRiskTrends,
+  useRiskSummary as useRiskSummaryHook,
+  riskKeys,
+} from './useRisk';
+
+// Re-export risk types
+export type {
+  RiskScore,
+  RiskScoreWeights,
+  FunctionRisk,
+  HeatMapData,
+  HeatMapCell,
+  HeatMapCellControl,
+  RiskPriority,
+  RiskTrendPoint,
+} from './useRisk';
+
+// Responsive hooks
+export {
+  useResponsive,
+  useBreakpoint,
+  useMediaQuery,
+  useMobileView,
+  useSafeAreaInsets,
+} from './useResponsive';

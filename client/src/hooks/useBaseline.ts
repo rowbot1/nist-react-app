@@ -272,8 +272,88 @@ export const useHasBaseline = (productId: string) => {
   const { data: baseline, isLoading } = useProductBaseline(productId);
 
   return {
-    hasBaseline: !!baseline,
+    hasBaseline: !!baseline && (baseline.controlIds?.length || 0) > 0,
     isLoading,
-    controlCount: baseline?.controlIds.length || 0,
+    controlCount: baseline?.controlIds?.length || 0,
   };
+};
+
+/**
+ * Baseline template interface
+ */
+export interface BaselineTemplate {
+  id: string;
+  name: string;
+  description: string;
+  controlCount: number;
+  functions: string[];
+}
+
+/**
+ * Fetch available baseline templates
+ */
+export const useBaselineTemplates = (
+  options?: Omit<UseQueryOptions<BaselineTemplate[], Error>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<BaselineTemplate[], Error>({
+    queryKey: [...baselineKeys.all, 'templates'] as const,
+    queryFn: async () => {
+      const response = await api.get<{ data: BaselineTemplate[] }>('/baselines/templates');
+      return response.data.data;
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes - templates don't change often
+    ...options,
+  });
+};
+
+/**
+ * Apply a baseline template to a product
+ */
+export interface ApplyTemplateInput {
+  productId: string;
+  templateId?: string;
+  controlIds?: string[];
+}
+
+export interface ApplyTemplateResult {
+  data: ProductBaseline;
+  summary: {
+    baselineControlsApplied: number;
+    systemsUpdated: number;
+    assessmentsCreated: number;
+    message: string;
+  };
+}
+
+export const useApplyBaselineTemplate = (
+  options?: UseMutationOptions<ApplyTemplateResult, Error, ApplyTemplateInput>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ApplyTemplateResult, Error, ApplyTemplateInput>({
+    mutationFn: async ({ productId, templateId, controlIds }) => {
+      const response = await api.post<ApplyTemplateResult>(
+        `/baselines/product/${productId}/apply-template`,
+        { templateId, controlIds }
+      );
+      return response.data;
+    },
+    onSuccess: (result, { productId }) => {
+      // Update baseline cache
+      queryClient.setQueryData(baselineKeys.detail(productId), result.data);
+
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: baselineKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+
+      // Invalidate assessments for this product's systems
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance'] });
+    },
+    onError: (error) => {
+      console.error('Failed to apply baseline template:', getErrorMessage(error));
+    },
+    ...options,
+  });
 };

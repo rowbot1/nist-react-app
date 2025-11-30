@@ -5,11 +5,7 @@ import {
   CssBaseline,
   Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemButton,
   ListItemIcon,
-  ListItemText,
   Toolbar,
   Typography,
   Avatar,
@@ -20,30 +16,24 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  Business as BusinessIcon,
-  Computer as ComputerIcon,
-  Assessment as AssessmentIcon,
-  Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Search as SearchIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext';
 import { Breadcrumbs } from './Breadcrumbs';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationCenter } from './NotificationCenter';
 import { SaveStatusIndicator } from './SaveStatusIndicator';
-import {
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-} from '@mui/icons-material';
+import { SidebarNavigation } from './SidebarNavigation';
 
-const drawerWidthExpanded = 240;
+const drawerWidthExpanded = 280;
 const drawerWidthCollapsed = 64;
 
 const Layout: React.FC = () => {
@@ -55,7 +45,6 @@ const Layout: React.FC = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
 
@@ -101,73 +90,41 @@ const Layout: React.FC = () => {
     navigate('/login');
   };
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Products', icon: <BusinessIcon />, path: '/products' },
-    { text: 'Systems', icon: <ComputerIcon />, path: '/systems' },
-    { text: 'Assessments', icon: <AssessmentIcon />, path: '/assessments' },
-    { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
-
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Toolbar sx={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
-        {sidebarCollapsed ? (
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            🛡️
-          </Typography>
-        ) : (
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            🛡️ NIST Mapper
-          </Typography>
-        )}
+        <Box
+          onClick={() => navigate('/')}
+          sx={{
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.8,
+            },
+            transition: 'opacity 0.2s',
+          }}
+        >
+          {sidebarCollapsed ? (
+            <Box
+              component="img"
+              src="/logo-icon.svg"
+              alt="Posture"
+              sx={{ height: 40, width: 'auto' }}
+            />
+          ) : (
+            <Box
+              component="img"
+              src="/logo.svg"
+              alt="Posture"
+              sx={{ height: 36, width: 'auto' }}
+            />
+          )}
+        </Box>
       </Toolbar>
       <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => {
-          // Check if current path matches or is a child route
-          const isActive = location.pathname === item.path ||
-                          location.pathname.startsWith(`${item.path}/`);
-
-          return (
-            <ListItem key={item.text} disablePadding>
-              <Tooltip title={sidebarCollapsed ? item.text : ''} placement="right" arrow>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    minHeight: 48,
-                    justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                    px: sidebarCollapsed ? 2 : 2.5,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: 'white',
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 0,
-                      mr: sidebarCollapsed ? 0 : 3,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary={item.text} />}
-                </ListItemButton>
-              </Tooltip>
-            </ListItem>
-          );
-        })}
-      </List>
+      {/* Nested Navigation */}
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <SidebarNavigation collapsed={sidebarCollapsed} />
+      </Box>
       <Divider />
       {/* Collapse/Expand Button */}
       <Box sx={{ p: 1, display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-end' }}>
@@ -202,7 +159,7 @@ const Layout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            NIST Control Mapper - Professional Edition
+            Posture
           </Typography>
 
           {/* Search Button */}
@@ -246,8 +203,8 @@ const Layout: React.FC = () => {
           <SaveStatusIndicator showIdle={false} size="small" variant="full" />
 
           {/* Theme Toggle */}
-          <Tooltip title={isDarkMode ? 'Light mode' : 'Dark mode'}>
-            <IconButton color="inherit" onClick={toggleTheme} sx={{ mr: 1 }}>
+          <Tooltip title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <IconButton onClick={toggleTheme} sx={{ mr: 1, color: 'text.primary' }}>
               {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
           </Tooltip>
@@ -268,7 +225,7 @@ const Layout: React.FC = () => {
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
           </IconButton>
-          
+
           <Menu
             id="user-menu"
             anchorEl={anchorEl}
@@ -310,7 +267,7 @@ const Layout: React.FC = () => {
           </Menu>
         </Toolbar>
       </AppBar>
-      
+
       <Box
         component="nav"
         sx={{
@@ -349,7 +306,7 @@ const Layout: React.FC = () => {
           {drawer}
         </Drawer>
       </Box>
-      
+
       <Box
         component="main"
         sx={{

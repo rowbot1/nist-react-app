@@ -16,6 +16,26 @@ import type {
 } from '../types/api.types';
 
 /**
+ * Official NIST CSF 2.0 Function Order
+ * Per NIST SP 800-53: Govern → Identify → Protect → Detect → Respond → Recover
+ */
+export const CSF_FUNCTION_ORDER: readonly string[] = ['GV', 'ID', 'PR', 'DE', 'RS', 'RC'] as const;
+
+/**
+ * Sort function codes according to NIST CSF 2.0 official order
+ */
+export const sortByCSFOrder = <T extends { code: string }>(items: T[]): T[] => {
+  return [...items].sort((a, b) => {
+    const indexA = CSF_FUNCTION_ORDER.indexOf(a.code);
+    const indexB = CSF_FUNCTION_ORDER.indexOf(b.code);
+    // If code not in list, put at end
+    const orderA = indexA === -1 ? 999 : indexA;
+    const orderB = indexB === -1 ? 999 : indexB;
+    return orderA - orderB;
+  });
+};
+
+/**
  * Query Keys for React Query caching
  */
 export const csfKeys = {
@@ -51,13 +71,22 @@ export const useCSFFunctions = (
         categories: [],
       }));
 
-      console.log('[useCSFFunctions] Transformed:', functions);
-      return functions;
+      // Sort functions in official NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC
+      const sortedFunctions = sortByCSFOrder(functions);
+
+      console.log('[useCSFFunctions] Transformed and sorted:', sortedFunctions);
+      return sortedFunctions;
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - CSF data changes infrequently
     ...options,
   });
 };
+
+// Helper to extract category code from subcategory ID (e.g., "DE.AE-01" -> "DE.AE")
+function extractCategoryCode(subcategoryId: string): string {
+  const match = subcategoryId.match(/^([A-Z]{2}\.[A-Z]{2})/);
+  return match ? match[1] : subcategoryId;
+}
 
 /**
  * Fetch categories for a specific function
@@ -69,24 +98,32 @@ export const useCSFCategories = (
   return useQuery<CSFCategory[], Error>({
     queryKey: csfKeys.category(functionId || 'all'),
     queryFn: async () => {
-      const url = functionId
-        ? `/csf/categories/${functionId}`
-        : '/csf/categories';
-      console.log('[useCSFCategories] Fetching:', url);
-      const response = await api.get<{ categories: any[]; total: number }>(url);
-      console.log('[useCSFCategories] Raw response:', response.data);
+      // Derive categories from controls since server categoryId is incorrect
+      console.log('[useCSFCategories] Deriving categories from controls...');
+      const response = await api.get<{ controls: any[]; total: number }>('/csf/controls');
 
-      // Transform server response to match client type
-      const categories = (response.data.categories || []).map((c: any) => ({
-        id: c.id,
-        functionId: c.functionId,
-        code: c.id,
-        name: c.name,
-        description: c.description,
-        subcategories: [],
-      }));
+      // Extract unique categories from controls
+      const seen = new Set<string>();
+      const categories: CSFCategory[] = [];
 
-      console.log('[useCSFCategories] Transformed:', categories);
+      (response.data.controls || []).forEach((c: any) => {
+        const catCode = extractCategoryCode(c.id);
+        if (!seen.has(catCode) && (!functionId || c.functionId === functionId)) {
+          seen.add(catCode);
+          categories.push({
+            id: catCode,
+            functionId: c.functionId,
+            code: catCode,
+            name: getCategoryName(catCode),
+            description: getCategoryDescription(catCode),
+            subcategories: [],
+          });
+        }
+      });
+
+      // Sort by code
+      categories.sort((a, b) => a.code.localeCompare(b.code));
+      console.log('[useCSFCategories] Derived:', categories.length, 'categories');
       return categories;
     },
     enabled: options?.enabled !== false, // Allow explicit disabling
@@ -94,6 +131,12 @@ export const useCSFCategories = (
     ...options,
   });
 };
+
+// Helper to truncate text for display
+function truncateText(text: string, maxLength: number = 80): string {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
+}
 
 /**
  * Fetch all subcategories
@@ -116,11 +159,16 @@ export const useCSFSubcategories = (
       (response.data.controls || []).forEach((c: any) => {
         if (!seen.has(c.id)) {
           seen.add(c.id);
+          // Extract proper categoryId from subcategory code (e.g., "DE.AE-01" -> "DE.AE")
+          const categoryId = extractCategoryCode(c.id);
+          // Use description text as name since title is just "Control"
+          const name = truncateText(c.text || c.title, 100);
+
           subcategories.push({
             id: c.id,
-            categoryId: c.categoryId,
+            categoryId: categoryId,
             code: c.id,
-            name: c.title,
+            name: name,
             description: c.text || '',
             implementationExamples: c.implementationExamples || [],
           });
@@ -184,32 +232,40 @@ function getFunctionName(code: string): string {
   return names[code] || code;
 }
 
+// Category data with names and descriptions
+const CATEGORY_DATA: Record<string, { name: string; description: string }> = {
+  'GV.OC': { name: 'Organizational Context', description: 'Understanding organizational context and priorities' },
+  'GV.RM': { name: 'Risk Management Strategy', description: 'Risk management strategy and governance' },
+  'GV.RR': { name: 'Roles, Responsibilities, and Authorities', description: 'Cybersecurity roles and responsibilities' },
+  'GV.PO': { name: 'Policy', description: 'Organizational policies and procedures' },
+  'GV.OV': { name: 'Oversight', description: 'Cybersecurity oversight and accountability' },
+  'GV.SC': { name: 'Cybersecurity Supply Chain Risk Management', description: 'Supply chain risk management' },
+  'ID.AM': { name: 'Asset Management', description: 'Identification and management of assets' },
+  'ID.RA': { name: 'Risk Assessment', description: 'Risk identification and assessment' },
+  'ID.IM': { name: 'Improvement', description: 'Continuous improvement processes' },
+  'PR.AA': { name: 'Identity Management, Authentication, and Access Control', description: 'Access control and authentication' },
+  'PR.AT': { name: 'Awareness and Training', description: 'Security awareness and training' },
+  'PR.DS': { name: 'Data Security', description: 'Data protection and privacy' },
+  'PR.PS': { name: 'Platform Security', description: 'Platform and infrastructure security' },
+  'PR.IR': { name: 'Technology Infrastructure Resilience', description: 'Infrastructure resilience and recovery' },
+  'DE.CM': { name: 'Continuous Monitoring', description: 'Continuous security monitoring' },
+  'DE.AE': { name: 'Adverse Event Analysis', description: 'Analysis of security events' },
+  'RS.MA': { name: 'Incident Management', description: 'Incident response management' },
+  'RS.AN': { name: 'Incident Analysis', description: 'Incident analysis and response' },
+  'RS.CO': { name: 'Incident Response Reporting and Communication', description: 'Incident communication and coordination' },
+  'RS.MI': { name: 'Incident Mitigation', description: 'Incident mitigation activities' },
+  'RC.RP': { name: 'Incident Recovery Plan Execution', description: 'Recovery planning and execution' },
+  'RC.CO': { name: 'Incident Recovery Communication', description: 'Recovery communication' },
+};
+
 // Helper to get category name from code
 function getCategoryName(code: string): string {
-  const names: Record<string, string> = {
-    'GV.OC': 'Organizational Context',
-    'GV.RM': 'Risk Management Strategy',
-    'GV.RR': 'Roles, Responsibilities, and Authorities',
-    'GV.PO': 'Policy',
-    'GV.OV': 'Oversight',
-    'GV.SC': 'Cybersecurity Supply Chain Risk Management',
-    'ID.AM': 'Asset Management',
-    'ID.RA': 'Risk Assessment',
-    'ID.IM': 'Improvement',
-    'PR.AA': 'Identity Management, Authentication, and Access Control',
-    'PR.AT': 'Awareness and Training',
-    'PR.DS': 'Data Security',
-    'PR.PS': 'Platform Security',
-    'PR.IR': 'Technology Infrastructure Resilience',
-    'DE.CM': 'Continuous Monitoring',
-    'DE.AE': 'Adverse Event Analysis',
-    'RS.MA': 'Incident Management',
-    'RS.AN': 'Incident Analysis',
-    'RS.MI': 'Incident Mitigation',
-    'RC.RP': 'Incident Recovery Plan Execution',
-    'RC.CO': 'Incident Recovery Communication',
-  };
-  return names[code] || code;
+  return CATEGORY_DATA[code]?.name || code;
+}
+
+// Helper to get category description from code
+function getCategoryDescription(code: string): string {
+  return CATEGORY_DATA[code]?.description || '';
 }
 
 /**
@@ -411,7 +467,8 @@ export const useCSFHierarchy = (
 
       (response.data.controls || []).forEach((c: any) => {
         const funcId = c.functionId;
-        const catId = c.categoryId;
+        // Extract proper categoryId from subcategory code (e.g., "DE.AE-01" -> "DE.AE")
+        const catId = extractCategoryCode(c.id);
 
         if (!functionsMap[funcId]) {
           functionsMap[funcId] = {
@@ -430,24 +487,28 @@ export const useCSFHierarchy = (
             functionId: funcId,
             code: catId,
             name: getCategoryName(catId),
-            description: '',
+            description: getCategoryDescription(catId),
             subcategories: [],
           };
           functionsMap[funcId].categories.push(category);
         }
 
+        // Use description text as name since title is just "Control"
+        const subcategoryName = truncateText(c.text || c.title, 100);
+
         category.subcategories.push({
           id: c.id,
           categoryId: catId,
           code: c.id,
-          name: c.title,
+          name: subcategoryName,
           description: c.text || '',
           implementationExamples: c.implementationExamples || [],
         });
       });
 
-      const hierarchy = Object.values(functionsMap).sort((a, b) => a.code.localeCompare(b.code));
-      console.log('[useCSFHierarchy] Built hierarchy with', hierarchy.length, 'functions');
+      // Sort functions in official NIST CSF 2.0 order: GV → ID → PR → DE → RS → RC
+      const hierarchy = sortByCSFOrder(Object.values(functionsMap));
+      console.log('[useCSFHierarchy] Built hierarchy with', hierarchy.length, 'functions (sorted)');
       return hierarchy;
     },
     staleTime: 30 * 60 * 1000, // 30 minutes
@@ -467,4 +528,50 @@ export const usePrefetchCSFData = () => {
     functionsCount: functions?.length || 0,
     controlsCount: controls?.length || 0,
   };
+};
+
+/**
+ * NIST 800-53 Mapping types
+ */
+export interface NIST80053MappingDetail {
+  id: string;
+  nist80053Id: string;
+  controlFamily: string;
+  priority: string;
+}
+
+export interface NIST80053MappingResponse {
+  csfControl: {
+    id: string;
+    title: string;
+    text: string;
+  };
+  totalMappings: number;
+  mappings: NIST80053MappingDetail[];
+  familySummary: {
+    family: string;
+    controlCount: number;
+    controls: NIST80053MappingDetail[];
+  }[];
+}
+
+/**
+ * Fetch NIST 800-53 mappings for a specific CSF control
+ */
+export const useCSFMappings = (
+  controlId: string,
+  options?: Omit<UseQueryOptions<NIST80053MappingResponse, Error>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<NIST80053MappingResponse, Error>({
+    queryKey: [...csfKeys.controls(), 'mappings', controlId],
+    queryFn: async () => {
+      console.log('[useCSFMappings] Fetching mappings for:', controlId);
+      const response = await api.get<NIST80053MappingResponse>(`/csf/mappings/${controlId}`);
+      console.log('[useCSFMappings] Response:', response.data);
+      return response.data;
+    },
+    enabled: !!controlId && options?.enabled !== false,
+    staleTime: 30 * 60 * 1000, // 30 minutes - mappings don't change
+    ...options,
+  });
 };

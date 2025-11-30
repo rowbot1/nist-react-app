@@ -47,7 +47,9 @@ import {
 import { useProduct } from '../hooks/useProducts';
 import { useProductCompliance, useFunctionCompliance } from '../hooks/useAnalytics';
 import { useSystems } from '../hooks/useSystems';
+import { useHasBaseline } from '../hooks/useBaseline';
 import AddSystemDialog from '../components/AddSystemDialog';
+import ApplyBaselineModal from '../components/ApplyBaselineModal';
 import type { ComplianceStatus } from '../types/api.types';
 
 interface TabPanelProps {
@@ -78,12 +80,14 @@ const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [currentTab, setCurrentTab] = useState(0);
   const [addSystemDialogOpen, setAddSystemDialogOpen] = useState(false);
+  const [applyBaselineModalOpen, setApplyBaselineModalOpen] = useState(false);
 
   // Fetch product data
   const { data: product, isLoading: productLoading, error: productError } = useProduct(id || '');
   const { data: compliance, isLoading: complianceLoading } = useProductCompliance(id || '');
   const { data: functionCompliance, isLoading: functionLoading } = useFunctionCompliance(id);
   const { data: systems = [], isLoading: systemsLoading } = useSystems(id);
+  const { hasBaseline, isLoading: baselineLoading, controlCount } = useHasBaseline(id || '');
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -132,13 +136,15 @@ const ProductDetails: React.FC = () => {
     );
   }
 
-  // Prepare chart data for compliance status
+  // Prepare chart data for compliance status (filter out 0 values)
   const statusChartData = compliance?.statusBreakdown
-    ? Object.entries(compliance.statusBreakdown).map(([status, count]) => ({
-        name: status,
-        value: count,
-        color: STATUS_COLORS[status as ComplianceStatus],
-      }))
+    ? Object.entries(compliance.statusBreakdown)
+        .filter(([_, count]) => count > 0)
+        .map(([status, count]) => ({
+          name: status,
+          value: count,
+          color: STATUS_COLORS[status as ComplianceStatus],
+        }))
     : [];
 
   // Prepare chart data for CSF functions
@@ -176,7 +182,7 @@ const ProductDetails: React.FC = () => {
               {product.description || 'No description provided'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Owner: {product.owner} | Last Updated:{' '}
+              Last Updated:{' '}
               {format(new Date(product.updatedAt), 'MMM dd, yyyy HH:mm')}
             </Typography>
           </Box>
@@ -233,15 +239,45 @@ const ProductDetails: React.FC = () => {
                 {compliance?.assessedControls || 0} of {compliance?.totalControls || 0} controls
                 assessed
               </Typography>
+              {/* Compliance level indicator */}
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 1,
+                  display: 'block',
+                  color: (compliance?.complianceScore || 0) >= 80 ? 'success.main'
+                    : (compliance?.complianceScore || 0) >= 50 ? 'warning.main'
+                    : 'error.main',
+                  fontWeight: 'medium'
+                }}
+              >
+                {(compliance?.complianceScore || 0) >= 80 ? 'Strong compliance posture'
+                  : (compliance?.complianceScore || 0) >= 50 ? 'Moderate - needs improvement'
+                  : (compliance?.totalControls || 0) === 0 ? 'Not yet configured'
+                  : 'Critical - requires attention'}
+              </Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={9}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
-                <Card>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    border: systems.length === 0 ? '1px dashed' : 'none',
+                    borderColor: 'warning.main',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3,
+                    },
+                  }}
+                  onClick={() => setCurrentTab(1)}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <ComputerIcon color="info" sx={{ mr: 1 }} />
+                      <ComputerIcon color={systems.length > 0 ? 'info' : 'disabled'} sx={{ mr: 1 }} />
                       <Typography variant="h5" fontWeight="bold">
                         {systems.length}
                       </Typography>
@@ -249,14 +285,35 @@ const ProductDetails: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       Systems
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, minHeight: 32 }}>
+                      {systems.length === 0
+                        ? 'Add systems to track compliance at component level'
+                        : `${systems.length} system${systems.length > 1 ? 's' : ''} being monitored`}
+                    </Typography>
+                    <Typography variant="caption" color="primary.main" sx={{ mt: 0.5, display: 'block' }}>
+                      {systems.length === 0 ? 'Add first system →' : 'Click to view →'}
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={12} sm={4}>
-                <Card>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    border: (compliance?.totalControls || 0) === 0 ? '2px dashed' : 'none',
+                    borderColor: 'error.main',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3,
+                    },
+                  }}
+                  onClick={() => navigate(`/products/${id}/baseline`)}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <SecurityIcon color="primary" sx={{ mr: 1 }} />
+                      <SecurityIcon color={(compliance?.totalControls || 0) > 0 ? 'primary' : 'error'} sx={{ mr: 1 }} />
                       <Typography variant="h5" fontWeight="bold">
                         {compliance?.totalControls || 0}
                       </Typography>
@@ -264,14 +321,35 @@ const ProductDetails: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       Total Controls
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, minHeight: 32 }}>
+                      {(compliance?.totalControls || 0) === 0
+                        ? 'Configure your security baseline first - this defines what controls apply'
+                        : `${compliance?.totalControls} CSF controls in your baseline`}
+                    </Typography>
+                    <Typography variant="caption" color={(compliance?.totalControls || 0) === 0 ? 'error.main' : 'primary.main'} sx={{ mt: 0.5, display: 'block', fontWeight: (compliance?.totalControls || 0) === 0 ? 'bold' : 'normal' }}>
+                      {(compliance?.totalControls || 0) === 0 ? 'Start here →' : 'Click to configure →'}
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={12} sm={4}>
-                <Card>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    border: (compliance?.totalControls || 0) > 0 && (compliance?.assessedControls || 0) === 0 ? '1px dashed' : 'none',
+                    borderColor: 'warning.main',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3,
+                    },
+                  }}
+                  onClick={() => navigate(`/products/${id}/assessments`)}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <AssessmentIcon color="success" sx={{ mr: 1 }} />
+                      <AssessmentIcon color={(compliance?.assessedControls || 0) > 0 ? 'success' : 'disabled'} sx={{ mr: 1 }} />
                       <Typography variant="h5" fontWeight="bold">
                         {compliance?.assessedControls || 0}
                       </Typography>
@@ -279,12 +357,70 @@ const ProductDetails: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       Assessed Controls
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, minHeight: 32 }}>
+                      {(compliance?.totalControls || 0) === 0
+                        ? 'Configure baseline first before assessing'
+                        : (compliance?.assessedControls || 0) === 0
+                          ? 'Begin assessing controls to track compliance'
+                          : `${Math.round(((compliance?.assessedControls || 0) / (compliance?.totalControls || 1)) * 100)}% assessment coverage`}
+                    </Typography>
+                    <Typography variant="caption" color="primary.main" sx={{ mt: 0.5, display: 'block' }}>
+                      {(compliance?.totalControls || 0) === 0 ? 'Configure baseline first' : 'Click to assess →'}
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>
             </Grid>
           </Grid>
         </Grid>
+
+        {/* Contextual Guidance */}
+        {((compliance?.totalControls || 0) === 0 || (compliance?.assessedControls || 0) === 0 || (compliance?.complianceScore || 0) < 80) && (
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'background.default', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {(compliance?.totalControls || 0) === 0 ? '🚀' : (compliance?.complianceScore || 0) >= 80 ? '✅' : '💡'}
+              {(compliance?.totalControls || 0) === 0
+                ? 'Getting Started'
+                : (compliance?.complianceScore || 0) >= 80
+                  ? 'Excellent Progress!'
+                  : 'Next Steps'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {(compliance?.totalControls || 0) === 0 ? (
+                <>
+                  <strong>Step 1:</strong> Configure your security baseline by selecting which NIST CSF 2.0 controls apply to this product.
+                  This defines your compliance scope. A typical web application has 40-80 applicable controls.
+                </>
+              ) : (compliance?.assessedControls || 0) === 0 ? (
+                <>
+                  <strong>Step 2:</strong> Start assessing your controls. For each control, document whether you're Compliant, Partially Compliant,
+                  Non-Compliant, or Not Applicable. Add evidence links and notes to support your assessments.
+                </>
+              ) : (compliance?.complianceScore || 0) < 50 ? (
+                <>
+                  <strong>Focus Areas:</strong> Your compliance score is below 50%. Prioritise addressing Non-Compliant controls,
+                  starting with those in GOVERN (GV) and PROTECT (PR) functions as they form the foundation of your security programme.
+                </>
+              ) : (compliance?.complianceScore || 0) < 80 ? (
+                <>
+                  <strong>Making Progress:</strong> You're on track! Focus on converting Partially Compliant controls to Compliant.
+                  Target 80%+ for a strong compliance posture. Consider scheduling regular review cycles.
+                </>
+              ) : null}
+            </Typography>
+            <Box sx={{ mt: 1.5, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Typography variant="caption" sx={{ color: 'success.main' }}>
+                ✓ Good: 80%+ compliance with evidence
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'warning.main' }}>
+                ◐ Fair: 50-79% - active improvement
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'error.main' }}>
+                ✗ Needs work: Below 50%
+              </Typography>
+            </Box>
+          </Box>
+        )}
       </Paper>
 
       {/* Tabs */}
@@ -467,13 +603,55 @@ const ProductDetails: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               CSF Baseline Configuration
             </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Define which NIST CSF controls are applicable to this product. This baseline will be
-              used for all systems under this product.
-            </Typography>
-            <Button variant="contained" onClick={() => navigate(`/products/${id}/baseline`)}>
-              Configure Baseline
-            </Button>
+            {!hasBaseline && !baselineLoading ? (
+              <>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  No baseline has been configured for this product. Apply a baseline template to get started.
+                </Alert>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  A baseline defines which NIST CSF 2.0 controls are applicable to this product.
+                  When you apply a baseline, it will automatically create compliance assessment records
+                  for all {systems.length} system{systems.length !== 1 ? 's' : ''} under this product.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<SecurityIcon />}
+                    onClick={() => setApplyBaselineModalOpen(true)}
+                  >
+                    Apply Baseline Template
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate(`/products/${id}/baseline`)}
+                  >
+                    Configure Manually
+                  </Button>
+                </Box>
+              </>
+            ) : (
+              <>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  This product has <strong>{controlCount}</strong> controls in its baseline.
+                  These controls define what compliance requirements apply to all systems under this product.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => navigate(`/products/${id}/baseline`)}
+                  >
+                    Configure Baseline
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setApplyBaselineModalOpen(true)}
+                  >
+                    Apply Different Template
+                  </Button>
+                </Box>
+              </>
+            )}
           </CardContent>
         </Card>
       </TabPanel>
@@ -568,6 +746,15 @@ const ProductDetails: React.FC = () => {
         open={addSystemDialogOpen}
         onClose={() => setAddSystemDialogOpen(false)}
         productId={id || ''}
+      />
+
+      {/* Apply Baseline Modal */}
+      <ApplyBaselineModal
+        open={applyBaselineModalOpen}
+        onClose={() => setApplyBaselineModalOpen(false)}
+        productId={id || ''}
+        productName={product?.name || ''}
+        systemCount={systems.length}
       />
     </Box>
   );

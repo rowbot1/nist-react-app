@@ -1,15 +1,37 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { logAuditFromRequest, getChangedFields } from '../services/auditService';
+import { complianceCalculationService } from '../services/complianceCalculation.service';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-// Validation schemas
+
+// Status mapping from frontend format to database format
+const STATUS_MAP: Record<string, string> = {
+  'Implemented': 'Implemented',
+  'Partially Implemented': 'Partially Implemented',
+  'Not Implemented': 'Not Implemented',
+  'Not Assessed': 'Not Assessed',
+  'Not Applicable': 'Not Applicable',
+  // Also accept legacy/alternate formats
+  'COMPLIANT': 'Implemented',
+  'PARTIALLY_COMPLIANT': 'Partially Implemented',
+  'NON_COMPLIANT': 'Not Implemented',
+  'NOT_ASSESSED': 'Not Assessed',
+  'NOT_APPLICABLE': 'Not Applicable',
+};
+
+// Validation schemas - accept both frontend and legacy formats
+const statusValues = [
+  'Implemented', 'Partially Implemented', 'Not Implemented', 'Not Assessed', 'Not Applicable',
+  'COMPLIANT', 'PARTIALLY_COMPLIANT', 'NON_COMPLIANT', 'NOT_ASSESSED', 'NOT_APPLICABLE'
+] as const;
+
 const createAssessmentSchema = z.object({
   subcategoryId: z.string().min(1),
-  status: z.enum(['NOT_ASSESSED', 'COMPLIANT', 'PARTIALLY_COMPLIANT', 'NON_COMPLIANT', 'NOT_APPLICABLE']),
+  status: z.enum(statusValues).transform(s => STATUS_MAP[s] || s),
   details: z.string().optional(),
   assessor: z.string().optional(),
   assessedDate: z.string().datetime().optional(),
@@ -18,12 +40,23 @@ const createAssessmentSchema = z.object({
   systemId: z.string().uuid()
 });
 
-const updateAssessmentSchema = createAssessmentSchema.partial().omit({ systemId: true });
+const updateAssessmentSchema = z.object({
+  subcategoryId: z.string().min(1).optional(),
+  status: z.enum(statusValues).transform(s => STATUS_MAP[s] || s).optional(),
+  details: z.string().optional(),
+  implementationNotes: z.string().optional(),
+  assessor: z.string().optional(),
+  assessedDate: z.string().datetime().optional(),
+  evidence: z.string().optional(),
+  remediationPlan: z.string().optional(),
+  riskLevel: z.string().optional(),
+  targetDate: z.string().optional(),
+});
 
 const bulkUpdateSchema = z.object({
   assessments: z.array(z.object({
     id: z.string().uuid(),
-    status: z.enum(['NOT_ASSESSED', 'COMPLIANT', 'PARTIALLY_COMPLIANT', 'NON_COMPLIANT', 'NOT_APPLICABLE']).optional(),
+    status: z.enum(statusValues).transform(s => STATUS_MAP[s] || s).optional(),
     details: z.string().optional(),
     assessor: z.string().optional(),
     assessedDate: z.string().datetime().optional(),
@@ -170,11 +203,11 @@ router.get('/:id', async (req: AuthenticatedRequest, res) => {
 
     // Parse evidence if it's a JSON string
     let parsedEvidence = null;
-    if (assessment.evidence) {
+    if (assessment.legacyEvidence) {
       try {
-        parsedEvidence = JSON.parse(assessment.evidence);
+        parsedEvidence = JSON.parse(assessment.legacyEvidence);
       } catch (e) {
-        parsedEvidence = assessment.evidence;
+        parsedEvidence = assessment.legacyEvidence;
       }
     }
 
@@ -207,6 +240,11 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     if (data.assessedDate) {
       data.assessedDate = new Date(data.assessedDate);
     }
+    // Map 'evidence' to 'legacyEvidence' for Prisma (field is @map("evidence") in schema)
+    if (data.evidence !== undefined) {
+      data.legacyEvidence = data.evidence;
+      delete data.evidence;
+    }
 
     const assessment = await prisma.complianceAssessment.create({
       data,
@@ -226,6 +264,9 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
       }
     });
 
+    // Invalidate cached compliance scores up the hierarchy
+    await complianceCalculationService.invalidateHierarchy(assessment.id);
+
     res.status(201).json(assessment);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -244,9 +285,27 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const validatedData = updateAssessmentSchema.parse(req.body);
 
-    // Verify ownership
-    const hasAccess = await verifyAssessmentOwnership(req.params.id, req.user!.id);
-    if (!hasAccess) {
+    // Verify ownership and get previous state for audit
+    const previousAssessment = await prisma.complianceAssessment.findFirst({
+      where: {
+        id: req.params.id,
+        system: {
+          product: {
+            userId: req.user!.id
+          }
+        }
+      },
+      include: {
+        system: {
+          select: {
+            name: true,
+            product: { select: { name: true } }
+          }
+        }
+      }
+    });
+
+    if (!previousAssessment) {
       return res.status(404).json({ error: 'Assessment not found' });
     }
 
@@ -254,6 +313,11 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
     const data: any = { ...validatedData };
     if (data.assessedDate) {
       data.assessedDate = new Date(data.assessedDate);
+    }
+    // Map 'evidence' to 'legacyEvidence' for Prisma (field is @map("evidence") in schema)
+    if (data.evidence !== undefined) {
+      data.legacyEvidence = data.evidence;
+      delete data.evidence;
     }
 
     const assessment = await prisma.complianceAssessment.update({
@@ -275,6 +339,39 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
       }
     });
 
+    // Audit log: Assessment updated (critical for compliance tracking)
+    const changedFields = getChangedFields(
+      previousAssessment as unknown as Record<string, unknown>,
+      assessment as unknown as Record<string, unknown>
+    );
+
+    await logAuditFromRequest(req, {
+      action: 'UPDATE',
+      entityType: 'Assessment',
+      entityId: req.params.id,
+      entityName: `${assessment.subcategoryId} - ${assessment.system.name}`,
+      previousValue: {
+        status: previousAssessment.status,
+        details: previousAssessment.details,
+        assessor: previousAssessment.assessor,
+      },
+      newValue: {
+        status: assessment.status,
+        details: assessment.details,
+        assessor: assessment.assessor,
+      },
+      changedFields,
+      details: {
+        subcategoryId: assessment.subcategoryId,
+        systemId: assessment.systemId,
+        systemName: assessment.system.name,
+        productName: assessment.system.product.name,
+      },
+    });
+
+    // Invalidate cached compliance scores up the hierarchy
+    await complianceCalculationService.invalidateHierarchy(assessment.id);
+
     res.json(assessment);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -291,15 +388,28 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
 // DELETE /api/assessments/:id - Delete assessment
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   try {
-    // Verify ownership
-    const hasAccess = await verifyAssessmentOwnership(req.params.id, req.user!.id);
-    if (!hasAccess) {
+    // Verify ownership and get system info for cache invalidation
+    const assessment = await prisma.complianceAssessment.findFirst({
+      where: {
+        id: req.params.id,
+        system: { product: { userId: req.user!.id } }
+      },
+      select: { id: true, systemId: true }
+    });
+
+    if (!assessment) {
       return res.status(404).json({ error: 'Assessment not found' });
     }
+
+    // Store systemId before deletion for cache invalidation
+    const systemId = assessment.systemId;
 
     await prisma.complianceAssessment.delete({
       where: { id: req.params.id }
     });
+
+    // Invalidate cached compliance scores for the system's hierarchy
+    await complianceCalculationService.invalidateSystemHierarchy(systemId);
 
     res.status(204).send();
   } catch (error) {
@@ -336,12 +446,27 @@ router.post('/bulk', async (req: AuthenticatedRequest, res) => {
           data.assessedDate = new Date(data.assessedDate);
         }
 
+        // Map status to database format
+        if (data.status) {
+          data.status = STATUS_MAP[data.status] || data.status;
+        }
+
+        // Map evidence to legacyEvidence for Prisma
+        if (data.evidence !== undefined) {
+          data.legacyEvidence = data.evidence;
+          delete data.evidence;
+        }
+
         return prisma.complianceAssessment.update({
           where: { id },
           data
         });
       })
     );
+
+    // Invalidate cached compliance scores for all affected assessments
+    const assessmentIds = validatedData.assessments.map(a => a.id);
+    await complianceCalculationService.invalidateBulk(assessmentIds);
 
     res.json({
       message: 'Bulk update successful',

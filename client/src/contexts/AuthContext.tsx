@@ -34,7 +34,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Configure axios defaults
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  // In production, use empty string for relative URLs (same origin)
+  const API_BASE_URL = process.env.REACT_APP_API_URL ||
+    (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
   axios.defaults.baseURL = API_BASE_URL;
 
   useEffect(() => {

@@ -1,10 +1,10 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 import PDFDocument from 'pdfkit';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Helper function to verify product ownership
 async function verifyProductOwnership(productId: string, userId: string): Promise<boolean> {
@@ -435,7 +435,7 @@ router.get('/json/:productId', async (req: AuthenticatedRequest, res) => {
             details: assessment.details,
             assessor: assessment.assessor,
             assessedDate: assessment.assessedDate,
-            evidence: assessment.evidence ? JSON.parse(assessment.evidence) : null,
+            evidence: assessment.legacyEvidence ? JSON.parse(assessment.legacyEvidence) : null,
             remediationPlan: assessment.remediationPlan,
             control: {
               id: control?.id,

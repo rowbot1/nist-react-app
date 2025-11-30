@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { PrismaClient } from '@prisma/client';
+import path from 'path';
+import { prisma } from './prisma';
 import winston from 'winston';
 
 // Import routes
@@ -15,14 +17,27 @@ import assessmentRoutes from './routes/assessments';
 import exportRoutes from './routes/export';
 import analyticsRoutes from './routes/analytics';
 import evidenceRoutes from './routes/evidence';
+import frameworkRoutes from './routes/frameworks';
+import capabilityCentreRoutes from './routes/capabilityCentres';
+import baselineRoutes from './routes/baselines';
+import auditRoutes from './routes/audit';
+import remediationRoutes from './routes/remediation';
+import commentsRoutes from './routes/comments';
+import assignmentsRoutes from './routes/assignments';
+import templatesRoutes from './routes/templates';
+import reportsRoutes from './routes/reports';
+import riskRoutes from './routes/risk';
+import complianceRoutes from './routes/compliance';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
-import { authMiddleware } from './middleware/auth';
+import { authMiddleware, requireRole } from './middleware/auth';
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy for rate limiting behind nginx
+app.set('trust proxy', 1);
 
 // Configure logger
 const logger = winston.createLogger({
@@ -32,7 +47,7 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     winston.format.json()
   ),
-  defaultMeta: { service: 'nist-control-mapper' },
+  defaultMeta: { service: 'posture' },
   transports: [
     new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
     new winston.transports.File({ filename: 'logs/combined.log' }),
@@ -43,10 +58,12 @@ const logger = winston.createLogger({
 });
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Allow inline scripts for React
+}));
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] 
+  origin: process.env.NODE_ENV === 'production'
+    ? [process.env.CORS_ORIGIN || 'http://107.173.250.161']
     : ['http://localhost:3000'],
   credentials: true
 }));
@@ -83,20 +100,32 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', authMiddleware, productRoutes);
-app.use('/api/systems', authMiddleware, systemRoutes);
-app.use('/api/csf', authMiddleware, csfRoutes);
-app.use('/api/nist80053', authMiddleware, nist80053Routes);
-app.use('/api/assessments', authMiddleware, assessmentRoutes);
-app.use('/api/export', authMiddleware, exportRoutes);
-app.use('/api/analytics', authMiddleware, analyticsRoutes);
-app.use('/api/evidence', authMiddleware, evidenceRoutes);
+app.use('/api/products', authMiddleware, requireRole(['USER', 'ADMIN']), productRoutes);
+app.use('/api/systems', authMiddleware, requireRole(['USER', 'ADMIN']), systemRoutes);
+app.use('/api/csf', authMiddleware, requireRole(['USER', 'ADMIN', 'AUDITOR']), csfRoutes);
+app.use('/api/nist80053', authMiddleware, requireRole(['USER', 'ADMIN', 'AUDITOR']), nist80053Routes);
+app.use('/api/assessments', authMiddleware, requireRole(['USER', 'ADMIN']), assessmentRoutes);
+app.use('/api/export', authMiddleware, requireRole(['USER', 'ADMIN', 'AUDITOR']), exportRoutes);
+app.use('/api/analytics', authMiddleware, requireRole(['ADMIN', 'AUDITOR']), analyticsRoutes);
+app.use('/api/evidence', authMiddleware, requireRole(['USER', 'ADMIN']), evidenceRoutes);
+app.use('/api/frameworks', authMiddleware, requireRole(['USER', 'ADMIN']), frameworkRoutes);
+app.use('/api/capability-centres', authMiddleware, requireRole(['USER', 'ADMIN']), capabilityCentreRoutes);
+app.use('/api/baselines', authMiddleware, requireRole(['USER', 'ADMIN']), baselineRoutes);
+app.use('/api/audit', authMiddleware, requireRole(['ADMIN', 'AUDITOR']), auditRoutes);
+app.use('/api/remediation', authMiddleware, requireRole(['USER', 'ADMIN']), remediationRoutes);
+app.use('/api/comments', authMiddleware, requireRole(['USER', 'ADMIN']), commentsRoutes);
+app.use('/api/assignments', authMiddleware, requireRole(['USER', 'ADMIN']), assignmentsRoutes);
+app.use('/api/templates', authMiddleware, requireRole(['USER', 'ADMIN']), templatesRoutes);
+app.use('/api/reports', authMiddleware, requireRole(['ADMIN', 'AUDITOR']), reportsRoutes);
+app.use('/api/risk', authMiddleware, requireRole(['ADMIN', 'USER']), riskRoutes);
+app.use('/api/compliance', authMiddleware, requireRole(['USER', 'ADMIN', 'AUDITOR']), complianceRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('public'));
+  const clientBuildPath = path.join(__dirname, '../../client/build');
+  app.use(express.static(clientBuildPath));
   app.get('*', (req, res) => {
-    res.sendFile('public/index.html', { root: __dirname });
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
 }
 

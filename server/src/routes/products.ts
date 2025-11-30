@@ -1,17 +1,20 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { logAuditFromRequest, getChangedFields } from '../services/auditService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 
 // Validation schemas
 const createProductSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
   type: z.enum(['WEB_APPLICATION', 'MOBILE_APPLICATION', 'INFRASTRUCTURE', 'CLOUD_SERVICE', 'API_SERVICE', 'DATABASE', 'NETWORK_DEVICE', 'SECURITY_TOOL', 'OTHER']).optional(),
-  criticality: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional()
+  criticality: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  impactLevel: z.enum(['LOW', 'MODERATE', 'HIGH']).optional(), // FIPS 199 security categorization
+  frameworkId: z.string().uuid(), // Products MUST belong to a framework
 });
 
 const updateProductSchema = createProductSchema.partial();
@@ -115,6 +118,18 @@ router.get('/:id', async (req: AuthenticatedRequest, res) => {
         userId: req.user!.id
       },
       include: {
+        framework: {
+          include: {
+            capabilityCentre: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                color: true
+              }
+            }
+          }
+        },
         systems: {
           include: {
             assessments: {
@@ -161,6 +176,15 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
       }
     });
 
+    // Audit log: Product created
+    await logAuditFromRequest(req, {
+      action: 'CREATE',
+      entityType: 'Product',
+      entityId: product.id,
+      entityName: product.name,
+      newValue: { name: product.name, type: product.type, criticality: product.criticality, impactLevel: product.impactLevel },
+    });
+
     res.status(201).json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -178,6 +202,18 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 router.put('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const validatedData = updateProductSchema.parse(req.body);
+
+    // Get previous state for audit
+    const previousProduct = await prisma.product.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user!.id
+      }
+    });
+
+    if (!previousProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
 
     const product = await prisma.product.updateMany({
       where: {
@@ -203,6 +239,22 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
       }
     });
 
+    // Audit log: Product updated
+    const changedFields = getChangedFields(
+      previousProduct as Record<string, unknown>,
+      updatedProduct as Record<string, unknown>
+    );
+
+    await logAuditFromRequest(req, {
+      action: 'UPDATE',
+      entityType: 'Product',
+      entityId: req.params.id,
+      entityName: updatedProduct?.name || previousProduct.name,
+      previousValue: { name: previousProduct.name, type: previousProduct.type, criticality: previousProduct.criticality, impactLevel: previousProduct.impactLevel },
+      newValue: { name: updatedProduct?.name, type: updatedProduct?.type, criticality: updatedProduct?.criticality, impactLevel: updatedProduct?.impactLevel },
+      changedFields,
+    });
+
     res.json(updatedProduct);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -219,6 +271,18 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
 // DELETE /api/products/:id - Delete product
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   try {
+    // Get product info for audit before deletion
+    const productToDelete = await prisma.product.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user!.id
+      }
+    });
+
+    if (!productToDelete) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
     const deleted = await prisma.product.deleteMany({
       where: {
         id: req.params.id,
@@ -229,6 +293,15 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
     if (deleted.count === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    // Audit log: Product deleted
+    await logAuditFromRequest(req, {
+      action: 'DELETE',
+      entityType: 'Product',
+      entityId: req.params.id,
+      entityName: productToDelete.name,
+      previousValue: { name: productToDelete.name, type: productToDelete.type, criticality: productToDelete.criticality, impactLevel: productToDelete.impactLevel },
+    });
 
     res.status(204).send();
   } catch (error) {

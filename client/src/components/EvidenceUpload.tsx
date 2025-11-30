@@ -21,6 +21,11 @@ import {
   DialogActions,
   Tooltip,
   Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -35,6 +40,8 @@ import {
   Code as CodeIcon,
   FolderZip as ZipIcon,
   Edit as EditIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -43,8 +50,12 @@ import {
   useDeleteEvidence,
   useUpdateEvidence,
   formatFileSize,
+  EVIDENCE_TYPES,
+  getEvidenceTypeLabel,
+  isExpiringSoon,
+  isExpired,
+  Evidence,
 } from '../hooks/useEvidence';
-import { Evidence } from '../types/api.types';
 
 interface EvidenceUploadProps {
   assessmentId: string;
@@ -64,10 +75,14 @@ const getFileIconComponent = (mimeType: string) => {
 
 export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, readOnly = false }) => {
   const [description, setDescription] = useState('');
+  const [evidenceType, setEvidenceType] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingEvidence, setEditingEvidence] = useState<Evidence | null>(null);
   const [editDescription, setEditDescription] = useState('');
+  const [editEvidenceType, setEditEvidenceType] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [evidenceToDelete, setEvidenceToDelete] = useState<Evidence | null>(null);
 
@@ -106,9 +121,13 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
         assessmentId,
         files: selectedFiles,
         description: description || undefined,
+        evidenceType: evidenceType || undefined,
+        expiresAt: expiresAt || undefined,
       });
       setSelectedFiles([]);
       setDescription('');
+      setEvidenceType('');
+      setExpiresAt('');
     } catch (error) {
       console.error('Upload failed:', error);
     }
@@ -120,7 +139,8 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
 
   const handleDownload = (evidence: Evidence) => {
     const token = localStorage.getItem('token');
-    const url = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/evidence/${evidence.id}/download`;
+    const baseUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
+    const url = `${baseUrl}/api/evidence/${evidence.id}/download`;
 
     fetch(url, {
       headers: {
@@ -144,6 +164,8 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
   const handleEditClick = (evidence: Evidence) => {
     setEditingEvidence(evidence);
     setEditDescription(evidence.description || '');
+    setEditEvidenceType(evidence.evidenceType || '');
+    setEditExpiresAt(evidence.expiresAt ? evidence.expiresAt.split('T')[0] : '');
     setEditDialogOpen(true);
   };
 
@@ -153,7 +175,12 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
     try {
       await updateMutation.mutateAsync({
         evidenceId: editingEvidence.id,
-        description: editDescription,
+        assessmentId,
+        updates: {
+          description: editDescription,
+          evidenceType: editEvidenceType || undefined,
+          expiresAt: editExpiresAt || undefined,
+        },
       });
       setEditDialogOpen(false);
       setEditingEvidence(null);
@@ -240,17 +267,51 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
               </Box>
             )}
 
-            {/* Description Field */}
+            {/* Metadata Fields */}
             {selectedFiles.length > 0 && (
-              <TextField
-                fullWidth
-                size="small"
-                label="Description (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add a description for these files..."
-                sx={{ mb: 2 }}
-              />
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Description (optional)"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add a description for these files..."
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Evidence Type</InputLabel>
+                    <Select
+                      value={evidenceType}
+                      onChange={(e) => setEvidenceType(e.target.value)}
+                      label="Evidence Type"
+                    >
+                      <MenuItem value="">
+                        <em>Unclassified</em>
+                      </MenuItem>
+                      {EVIDENCE_TYPES.map((type) => (
+                        <MenuItem key={type.value} value={type.value}>
+                          {type.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="date"
+                    label="Expiration Date (optional)"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Set if evidence expires"
+                  />
+                </Grid>
+              </Grid>
             )}
 
             {/* Upload Button */}
@@ -290,9 +351,9 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
         {/* Existing Evidence List */}
         {listLoading ? (
           <LinearProgress />
-        ) : evidenceData?.evidence && evidenceData.evidence.length > 0 ? (
+        ) : evidenceData && evidenceData.length > 0 ? (
           <List dense>
-            {evidenceData.evidence.map((evidence) => (
+            {evidenceData.map((evidence) => (
               <ListItem
                 key={evidence.id}
                 sx={{
@@ -306,10 +367,41 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
                   {getFileIconComponent(evidence.mimeType)}
                 </ListItemIcon>
                 <ListItemText
-                  primary={evidence.originalName}
+                  primary={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <span>{evidence.originalName}</span>
+                      {evidence.evidenceType && (
+                        <Chip
+                          label={getEvidenceTypeLabel(evidence.evidenceType)}
+                          size="small"
+                          variant="outlined"
+                          sx={{ height: 18, fontSize: '0.65rem' }}
+                        />
+                      )}
+                      {evidence.expiresAt && isExpired(evidence.expiresAt) && (
+                        <Tooltip title="Evidence has expired">
+                          <ErrorIcon color="error" sx={{ fontSize: 16 }} />
+                        </Tooltip>
+                      )}
+                      {evidence.expiresAt && isExpiringSoon(evidence.expiresAt) && !isExpired(evidence.expiresAt) && (
+                        <Tooltip title="Evidence expiring soon">
+                          <WarningIcon color="warning" sx={{ fontSize: 16 }} />
+                        </Tooltip>
+                      )}
+                    </Box>
+                  }
                   secondary={
                     <>
-                      {formatFileSize(evidence.fileSize)} | Uploaded {new Date(evidence.uploadedAt).toLocaleDateString()}
+                      {formatFileSize(evidence.fileSize)} | Uploaded {new Date(evidence.createdAt || '').toLocaleDateString()}
+                      {evidence.expiresAt && (
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color={isExpired(evidence.expiresAt) ? 'error' : isExpiringSoon(evidence.expiresAt) ? 'warning.main' : 'textSecondary'}
+                        >
+                          Expires: {new Date(evidence.expiresAt).toLocaleDateString()}
+                        </Typography>
+                      )}
                       {evidence.description && (
                         <Typography variant="caption" display="block" color="textSecondary">
                           {evidence.description}
@@ -355,17 +447,50 @@ export const EvidenceUpload: React.FC<EvidenceUploadProps> = ({ assessmentId, re
 
         {/* Edit Dialog */}
         <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Edit Evidence Description</DialogTitle>
+          <DialogTitle>Edit Evidence</DialogTitle>
           <DialogContent>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Description"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              sx={{ mt: 1 }}
-            />
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Evidence Type</InputLabel>
+                  <Select
+                    value={editEvidenceType}
+                    onChange={(e) => setEditEvidenceType(e.target.value)}
+                    label="Evidence Type"
+                  >
+                    <MenuItem value="">
+                      <em>Unclassified</em>
+                    </MenuItem>
+                    {EVIDENCE_TYPES.map((type) => (
+                      <MenuItem key={type.value} value={type.value}>
+                        {type.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="Expiration Date"
+                  value={editExpiresAt}
+                  onChange={(e) => setEditExpiresAt(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>

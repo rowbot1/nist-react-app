@@ -26,7 +26,19 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
+  HelpOutline as HelpIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Alert from '@mui/material/Alert';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Tooltip from '@mui/material/Tooltip';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -37,6 +49,7 @@ import {
   useUpdateProduct,
   useDeleteProduct,
 } from '../hooks/useProducts';
+import { useOrganizationalHierarchy } from '../hooks/useCapabilityCentres';
 import type { Product, CreateProductInput } from '../types/api.types';
 
 // Product type options
@@ -60,6 +73,143 @@ const CRITICALITY_LEVELS = [
   { value: 'CRITICAL', label: 'Critical', color: 'error' as const },
 ] as const;
 
+// FIPS 199 Impact Level options
+const IMPACT_LEVELS = [
+  { value: 'LOW', label: 'Low', color: 'success' as const, description: 'Limited adverse effect' },
+  { value: 'MODERATE', label: 'Moderate', color: 'warning' as const, description: 'Serious adverse effect' },
+  { value: 'HIGH', label: 'High', color: 'error' as const, description: 'Severe or catastrophic adverse effect' },
+] as const;
+
+// FIPS 199 Guidance Component
+const FIPS199Guidance: React.FC = () => (
+  <Box sx={{ mt: 2, mb: 1 }}>
+    <Accordion sx={{ bgcolor: 'grey.50' }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <HelpIcon color="info" fontSize="small" />
+          <Typography variant="subtitle2" color="info.main">
+            FIPS 199 Security Categorization Guide
+          </Typography>
+        </Box>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* What is FIPS 199 */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              What is FIPS 199?
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              FIPS 199 (Federal Information Processing Standard 199) establishes security categories
+              for federal information and information systems based on potential impact to an organization
+              if there is a loss of <strong>Confidentiality</strong>, <strong>Integrity</strong>, or <strong>Availability</strong> (the CIA triad).
+            </Typography>
+          </Box>
+
+          {/* High Water Mark */}
+          <Alert severity="info" sx={{ py: 0.5 }}>
+            <Typography variant="body2">
+              <strong>High Water Mark Principle:</strong> The overall impact level is determined by the
+              HIGHEST impact level among Confidentiality, Integrity, and Availability. If any one is HIGH,
+              the system is categorized as HIGH.
+            </Typography>
+          </Alert>
+
+          {/* CIA Assessment Table */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              How to Determine Impact Level
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Assess each security objective and select the highest:
+            </Typography>
+            <Table size="small" sx={{ '& td, & th': { py: 0.75, px: 1 } }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'grey.100' }}>
+                  <TableCell><strong>Impact</strong></TableCell>
+                  <TableCell><strong>Confidentiality</strong></TableCell>
+                  <TableCell><strong>Integrity</strong></TableCell>
+                  <TableCell><strong>Availability</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>
+                    <Chip label="LOW" size="small" color="success" sx={{ minWidth: 70 }} />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized disclosure has <strong>limited</strong> effect on operations, assets, or individuals
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized modification has <strong>limited</strong> effect
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Disruption has <strong>limited</strong> effect; minor degradation acceptable
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    <Chip label="MODERATE" size="small" color="warning" sx={{ minWidth: 70 }} />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized disclosure has <strong>serious</strong> effect on operations, assets, or individuals
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized modification has <strong>serious</strong> effect; significant harm
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Disruption has <strong>serious</strong> effect; significant degradation or loss
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    <Chip label="HIGH" size="small" color="error" sx={{ minWidth: 70 }} />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized disclosure has <strong>severe/catastrophic</strong> effect; major financial loss, threat to life
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Unauthorized modification has <strong>severe/catastrophic</strong> effect
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    Disruption has <strong>severe/catastrophic</strong> effect; complete loss unacceptable
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Box>
+
+          {/* Examples */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              Quick Examples
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="body2">
+                <Chip label="LOW" size="small" color="success" sx={{ mr: 1, minWidth: 60 }} />
+                Public website, marketing materials, non-sensitive internal tools
+              </Typography>
+              <Typography variant="body2">
+                <Chip label="MODERATE" size="small" color="warning" sx={{ mr: 1, minWidth: 60 }} />
+                Business email, HR systems, financial reporting, customer portals
+              </Typography>
+              <Typography variant="body2">
+                <Chip label="HIGH" size="small" color="error" sx={{ mr: 1, minWidth: 60 }} />
+                PII/PHI databases, payment systems, critical infrastructure, safety systems
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Reference */}
+          <Typography variant="caption" color="text.secondary">
+            Reference: NIST FIPS Publication 199 - Standards for Security Categorization of Federal Information and Information Systems
+          </Typography>
+        </Box>
+      </AccordionDetails>
+    </Accordion>
+  </Box>
+);
+
 // Extended Product interface with additional fields
 interface ExtendedProduct extends Product {
   type?: string;
@@ -71,6 +221,8 @@ interface ProductFormData {
   description: string;
   type: string;
   criticality: string;
+  impactLevel: string;
+  frameworkId: string; // Required - products must belong to a framework
 }
 
 const Products: React.FC = () => {
@@ -85,22 +237,42 @@ const Products: React.FC = () => {
 
   // API hooks
   const { data: products = [], isLoading } = useProducts();
+  const { data: hierarchy = [] } = useOrganizationalHierarchy();
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
 
-  // Form handling
+  // Flatten frameworks for the dropdown
+  const frameworkOptions = useMemo(() => {
+    const options: Array<{ id: string; name: string; ccName: string; isUnassigned: boolean }> = [];
+    for (const cc of hierarchy) {
+      for (const framework of cc.frameworks) {
+        options.push({
+          id: framework.id,
+          name: framework.name,
+          ccName: cc.name,
+          isUnassigned: framework.isUnassigned || false,
+        });
+      }
+    }
+    return options;
+  }, [hierarchy]);
+
+  // Form handling with onChange validation mode for immediate feedback
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ProductFormData>({
+    mode: 'onChange', // Validate on change for immediate feedback
     defaultValues: {
       name: '',
       description: '',
       type: 'WEB_APPLICATION',
       criticality: 'MEDIUM',
+      impactLevel: 'MODERATE',
+      frameworkId: '',
     },
   });
 
@@ -123,6 +295,8 @@ const Products: React.FC = () => {
       description: '',
       type: 'WEB_APPLICATION',
       criticality: 'MEDIUM',
+      impactLevel: 'MODERATE',
+      frameworkId: frameworkOptions[0]?.id || '',
     });
     setOpenModal(true);
   };
@@ -135,6 +309,8 @@ const Products: React.FC = () => {
       description: product.description || '',
       type: product.type || 'WEB_APPLICATION',
       criticality: product.criticality || 'MEDIUM',
+      impactLevel: product.impactLevel || 'MODERATE',
+      frameworkId: product.frameworkId || frameworkOptions[0]?.id || '',
     });
     setOpenModal(true);
   };
@@ -157,6 +333,9 @@ const Products: React.FC = () => {
             name: data.name,
             description: data.description,
             owner: editingProduct.owner, // Preserve owner
+            type: data.type,
+            criticality: data.criticality,
+            impactLevel: data.impactLevel as 'LOW' | 'MODERATE' | 'HIGH',
           },
         });
       } else {
@@ -166,6 +345,8 @@ const Products: React.FC = () => {
           description: data.description,
           type: data.type,
           criticality: data.criticality,
+          impactLevel: data.impactLevel as 'LOW' | 'MODERATE' | 'HIGH',
+          frameworkId: data.frameworkId, // Required - products must belong to a framework
         };
         await createMutation.mutateAsync(createInput);
       }
@@ -245,7 +426,7 @@ const Products: React.FC = () => {
     {
       field: 'criticality',
       headerName: 'Criticality',
-      width: 130,
+      width: 120,
       renderCell: (params: GridRenderCellParams<ExtendedProduct>) => {
         const criticalityInfo = CRITICALITY_LEVELS.find(
           (c) => c.value === params.row.criticality
@@ -256,6 +437,26 @@ const Products: React.FC = () => {
             size="small"
             color={criticalityInfo?.color || 'default'}
           />
+        );
+      },
+    },
+    {
+      field: 'impactLevel',
+      headerName: 'FIPS 199',
+      width: 110,
+      renderCell: (params: GridRenderCellParams<ExtendedProduct>) => {
+        const impactInfo = IMPACT_LEVELS.find(
+          (i) => i.value === params.row.impactLevel
+        );
+        return (
+          <Tooltip title={impactInfo?.description || 'FIPS 199 Security Categorization'}>
+            <Chip
+              label={impactInfo?.label || params.row.impactLevel || 'Moderate'}
+              size="small"
+              color={impactInfo?.color || 'warning'}
+              variant="outlined"
+            />
+          </Tooltip>
         );
       },
     },
@@ -304,26 +505,30 @@ const Products: React.FC = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams<ExtendedProduct>) => (
         <Box>
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditClick(params.row);
-            }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClick(params.row);
-            }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title="Edit product">
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditClick(params.row);
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete product">
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(params.row);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       ),
     },
@@ -422,7 +627,7 @@ const Products: React.FC = () => {
       </Card>
 
       {/* Create/Edit Modal */}
-      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>
             {editingProduct ? 'Edit Product' : 'Create New Product'}
@@ -456,6 +661,34 @@ const Products: React.FC = () => {
                     rows={3}
                     helperText="Optional description of the product"
                   />
+                )}
+              />
+              <Controller
+                name="frameworkId"
+                control={control}
+                rules={{ required: 'Framework is required - products must belong to a framework' }}
+                render={({ field }) => (
+                  <FormControl fullWidth required error={!!errors.frameworkId}>
+                    <InputLabel>Framework</InputLabel>
+                    <Select {...field} label="Framework">
+                      {frameworkOptions.map((fw) => (
+                        <MenuItem key={fw.id} value={fw.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2">
+                              {fw.name}
+                              {fw.isUnassigned && ' (Unassigned)'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              — {fw.ccName}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      {errors.frameworkId?.message || 'Select which framework this product belongs to'}
+                    </FormHelperText>
+                  </FormControl>
                 )}
               />
               <Controller
@@ -496,6 +729,36 @@ const Products: React.FC = () => {
                   </FormControl>
                 )}
               />
+              <Controller
+                name="impactLevel"
+                control={control}
+                rules={{ required: 'FIPS 199 impact level is required' }}
+                render={({ field }) => (
+                  <FormControl fullWidth required error={!!errors.impactLevel}>
+                    <InputLabel>FIPS 199 Impact Level</InputLabel>
+                    <Select {...field} label="FIPS 199 Impact Level">
+                      {IMPACT_LEVELS.map((level) => (
+                        <MenuItem key={level.value} value={level.value}>
+                          <Box>
+                            <Typography variant="body2" component="span">
+                              {level.label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                              - {level.description}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      {errors.impactLevel?.message || 'Security categorization per FIPS 199'}
+                    </FormHelperText>
+                  </FormControl>
+                )}
+              />
+
+              {/* FIPS 199 Guidance */}
+              <FIPS199Guidance />
             </Box>
           </DialogContent>
           <DialogActions>
@@ -503,7 +766,7 @@ const Products: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || !isValid}
             >
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
@@ -518,9 +781,21 @@ const Products: React.FC = () => {
           <DialogContentText>
             Are you sure you want to delete <strong>{productToDelete?.name}</strong>?
           </DialogContentText>
+          {productToDelete && (productToDelete.systemCount || 0) > 0 && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography variant="body2" fontWeight="bold" color="error.dark">
+                This will permanently delete:
+              </Typography>
+              <Typography variant="body2" color="error.dark" sx={{ mt: 1 }}>
+                • {productToDelete.systemCount || 0} system{(productToDelete.systemCount || 0) !== 1 ? 's' : ''}
+              </Typography>
+              <Typography variant="body2" color="error.dark">
+                • All associated compliance assessments
+              </Typography>
+            </Box>
+          )}
           <DialogContentText color="error" sx={{ mt: 2 }}>
-            Warning: This will also delete all associated systems and assessments. This action
-            cannot be undone.
+            This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
