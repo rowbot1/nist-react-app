@@ -36,8 +36,8 @@ const Login: React.FC = () => {
     formState: { errors },
   } = useForm<LoginForm>({
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'demo@posture.app',
+      password: 'demo123',
     },
   });
 
@@ -213,9 +213,29 @@ const Login: React.FC = () => {
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: '#0B1120' }}>
             Sign in to your account
           </Typography>
-          <Typography sx={{ color: '#475569', mb: 4 }}>
+          <Typography sx={{ color: '#475569', mb: 3 }}>
             Enter your credentials to access the platform
           </Typography>
+
+          {/* Demo credentials notice */}
+          <Alert
+            severity="info"
+            sx={{
+              mb: 3,
+              bgcolor: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              '& .MuiAlert-icon': {
+                color: '#2563EB',
+              },
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E40AF', mb: 0.5 }}>
+              Demo credentials pre-filled
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#1E40AF', fontSize: '0.875rem' }}>
+              Click "Sign in" to explore with demo@posture.app
+            </Typography>
+          </Alert>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -245,12 +265,24 @@ const Login: React.FC = () => {
                   helperText={errors.email?.message}
                   sx={{
                     mb: 2,
-                    '& .MuiInputLabel-root': { color: '#475569' },
+                    '& .MuiInputLabel-root': {
+                      color: '#1E293B',
+                      fontWeight: 500,
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#06B6D4',
+                    },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: '#CBD5E1' },
-                      '&:hover fieldset': { borderColor: '#94A3B8' },
+                      '&:hover fieldset': { borderColor: '#06B6D4' },
+                      '&.Mui-focused fieldset': { borderColor: '#06B6D4' },
+                      bgcolor: 'white',
                     },
-                    '& .MuiInputBase-input': { color: '#0B1120' },
+                    '& .MuiInputBase-input': {
+                      color: '#0B1120',
+                      fontWeight: 500,
+                      fontSize: '1rem',
+                    },
                     '& .MuiInputBase-input::placeholder': { color: '#94A3B8', opacity: 1 },
                   }}
                 />
@@ -278,12 +310,24 @@ const Login: React.FC = () => {
                   helperText={errors.password?.message}
                   sx={{
                     mb: 1,
-                    '& .MuiInputLabel-root': { color: '#475569' },
+                    '& .MuiInputLabel-root': {
+                      color: '#1E293B',
+                      fontWeight: 500,
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#06B6D4',
+                    },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: '#CBD5E1' },
-                      '&:hover fieldset': { borderColor: '#94A3B8' },
+                      '&:hover fieldset': { borderColor: '#06B6D4' },
+                      '&.Mui-focused fieldset': { borderColor: '#06B6D4' },
+                      bgcolor: 'white',
                     },
-                    '& .MuiInputBase-input': { color: '#0B1120' },
+                    '& .MuiInputBase-input': {
+                      color: '#0B1120',
+                      fontWeight: 500,
+                      fontSize: '1rem',
+                    },
                   }}
                 />
               )}
